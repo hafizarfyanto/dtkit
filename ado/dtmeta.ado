@@ -3,7 +3,7 @@ program define dtmeta
     *! Version 1.0.0 Hafiz 25May2025
     * Module to produce three metadata datasets in separate frames
     
-    version 12.0
+    version 16
     syntax [using/] [, Clear Saving(string) REPlace MERge REPORT]
     
     // * INPUT VALIDATION AND SETUP

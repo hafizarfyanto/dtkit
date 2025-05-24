@@ -122,8 +122,7 @@ do-files and programs.
 {title:Compatibility}
 
 {pstd}
-{opt dtkit} requires Stata 12.0 or later. All commands are compatible with Stata/IC, 
-Stata/SE, and Stata/MP. The package has been tested on Windows 11 only.
+{opt dtkit} requires Stata 16.0 or later. All commands are tested only on Stata/MP. The package has been tested on Windows 11 only.
 
 {marker authors}{...}
 {title:Authors}
