@@ -1,6 +1,6 @@
 capture program drop dtsum
 program define dtsum
-    *! Version 1.0.0 Hafiz 25May2025
+    *! Version 1.1.0 Hafiz 25May2025
     * Module to produce descriptive statistics dataset
 
     version 16
