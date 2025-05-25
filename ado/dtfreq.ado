@@ -1,6 +1,6 @@
 capture program drop dtfreq
 program define dtfreq
-    *! Version 1.1.0 Hafiz 25May2025
+    *! Version 2.0.0 Hafiz 25May2025
     * Module to produce frequency dataset
 
     version 16
@@ -9,8 +9,6 @@ program define dtfreq
     // * initialization and validation
     // Set default frame name
     if "`df'" == "" local df "_df"
-
-    // Set defaults for stats and type options
     if "`stats'" == "" local stats "col"
     if "`type'" == "" local type "prop"
 
@@ -35,8 +33,7 @@ program define dtfreq
     }
 
     // Store current frame for cleanup
-    quietly pwf
-    local currentframe = r(currentframe)
+    local currentframe = c(frame)
     if "`currentframe'" == "" {
         display as error "Cannot determine current frame"
         exit 198
@@ -85,23 +82,6 @@ program define dtfreq
                 exit 198
             }
         }
-    }
-
-    // Check dependencies and set contract command
-    if "`fast'" != "" {
-        capture which gtools
-        if _rc == 111 {
-            display as error "gtools is required for fast option. Install using " ///
-                as smcl "{stata ssc install gtools}" as error " and then " ///
-                as smcl "{stata gtools, upgrade}"
-            exit 111
-        }
-        local contractcmd "gcontract"
-        local contractopt "fast"
-    }
-    else {
-        local contractcmd "contract"
-        local contractopt ""
     }
 
     // * sample marking and setup
@@ -223,21 +203,86 @@ program define dtfreq
                 local `rowby'`val': label (`rowby') `x'
             }
         }
-        // Create frequency table using contract command
-        `contractcmd' `var' `rowby' `colby' `markcmd', freq(freq) `contractopt'
 
-        // Calculate proportions and percentages
-        if "`rowby'" ~= "" | "`colby'" ~= "" quietly egen total = total(freq), by(`rowby' `colby')
-        else quietly egen total = total(freq)
+        // Create frequency table using table and collect commands
+        collect clear
+        collect style autolevels on // Ensure all levels of categorical variables are included
 
-        generate prop = freq / total
-        generate pct = prop * 100
+        // Build dimension list for collect layout, e.g. (var1) (rowby_var) (colby_var)
+        local table_layout_vars "(\`var')"
+        if "`rowby'" != "" {
+            local table_layout_vars "`table_layout_vars' (\`rowby')"
+        }
+        if "`colby'" != "" {
+            local table_layout_vars "`table_layout_vars' (\`colby')"
+        }
+
+        // Build variable list for the table command itself, e.g. var1 rowby_var colby_var
+        local table_cmd_vars "`var'"
+        if "`rowby'" != "" {
+            local table_cmd_vars "`table_cmd_vars' `rowby'"
+        }
+        if "`colby'" != "" {
+            local table_cmd_vars "`table_cmd_vars' `colby'"
+        }
         
-        // Add descriptive variable labels
-        label variable prop "Column proportion"
-        label variable total "Total"
-        label variable freq "Frequency"
-        label variable pct "Column percentage (%)"
+        // Execute table, collecting the frequency directly as 'freq'
+        quietly table `table_cmd_vars' `markcmd', collect(freq name(dtfreq_collect))
+
+        // Define the layout for the collection
+        collect layout `table_layout_vars' (freq)
+
+        // Export the collection to a temporary dta file
+        tempfile current_var_freqs_dta
+        collect export "`current_var_freqs_dta'", as(dta) replace
+
+        // Load the exported dta file. It will contain `var`, `rowby` (if any), `colby` (if any), and `freq`.
+        use "`current_var_freqs_dta'", clear
+        
+        // Variable `freq` should already be named correctly due to `collect(freq)`.
+        // Dimension variables (`var`, `rowby`, `colby`) are named correctly by `collect layout`.
+
+        // Label base frequency variable (already done by collect's default or if specified in table)
+        // For safety, ensure it's labeled if not already.
+        capture label variable freq "Frequency" 
+
+        // --- New Proportion/Percentage Calculations ---
+
+        // Cell Proportions/Percentages (grand total for current `var`)
+        // Renaming N_cell to total_freq_for_var as per instruction point 5
+        quietly egen total_freq_for_var = total(freq) // Total N for the current `var` across all its combinations
+        quietly generate cellprop = freq / total_freq_for_var
+        quietly generate cellpct = cellprop * 100
+        label variable total_freq_for_var "Total Freq for `var'"
+        label variable cellprop "Cell Proportion"
+        label variable cellpct "Cell Percent"
+
+        // Row Proportions/Percentages (Only if `rowby` is specified)
+        // Proportions within each category of `rowby` for the current `var`.
+        if "`rowby'" != "" {
+            quietly egen N_row = total(freq), by(`var' `rowby')
+            quietly generate rowprop = freq / N_row
+            quietly generate rowpct = rowprop * 100
+            label variable N_row "Total Freq for (`var', `rowby')" // Denominator for rowprop
+            label variable rowprop "Row Proportion"
+            label variable rowpct "Row Percent"
+        }
+
+        // Column Proportions/Percentages
+        local col_total_by_vars "`var'" // Default: by `var` only (makes colprop = cellprop)
+        if "`colby'" != "" { // If colby is specified, then by `var` and `colby`
+            local col_total_by_vars "`var' `colby'"
+        }
+        // If colby is NOT specified, col_total_by_vars remains `var`.
+        // This means if only rowby is specified, colprop will still be freq / total(freq) by `var`.
+        
+        quietly egen N_col = total(freq), by(`col_total_by_vars')
+        quietly generate colprop = freq / N_col
+        quietly generate colpct = colprop * 100
+        label variable N_col "Denominator for Col Prop" 
+        label variable colprop "Col Proportion"
+        label variable colpct "Col Percent"
+        // --- End New Proportion/Percentage Calculations ---
 
         // Keep only non-missing observations for current variable
         quietly keep if !missing(`var')
@@ -343,11 +388,19 @@ program define dtfreq
             if "`colby_lbl_`clean_val''" == "" local colby_lbl_`clean_val' "`val'"
         }
 
-        // Perform reshape operation
-        capture reshape wide freq prop pct total, i(`rowby' varname varlab vallab) j(`colby')
+        // Define list of variables to reshape based on what was generated
+        local reshape_wide_vars "freq cellprop cellpct total_freq_for_var colprop colpct N_col"
+        // Check if row-specific variables were generated (i.e., if rowby was specified)
+        // A simple way to check is if N_row exists (it's only created if rowby is present)
+        capture confirm variable N_row
+        if _rc == 0 {
+            local reshape_wide_vars "`reshape_wide_vars' rowprop rowpct N_row"
+        }
+
+        // Perform reshape operation with new variables
+        capture reshape wide `reshape_wide_vars', i(`rowby' varname varlab vallab) j(`colby')
         if _rc != 0 {
-            display as error "Reshape failed. Check for duplicate observations or missing identifier variables"
-            display as error "Error code: `_rc'"
+            display as error "Reshape failed. Check for duplicate observations or missing identifier variables (vars: `reshape_wide_vars'). Error: `_rc'"
             exit _rc
         }
 
@@ -357,28 +410,46 @@ program define dtfreq
 
         foreach val of local colby_values {
             local clean_val = subinstr("`val'", ".", "_", .)
-            capture label variable freq`clean_val' "`colby_lbl_`clean_val''"
-            capture label variable total`clean_val' "Total `colby_lbl_`clean_val''"
-            capture label variable prop`clean_val' "Column proportion `colby_lbl_`clean_val''"
-            capture label variable pct`clean_val' "Column percentage `colby_lbl_`clean_val'' (%)"
+            capture label variable freq`val' "`colby_lbl_`val'' Freq"
+            capture label variable cellprop`val' "`colby_lbl_`val'' Cell Prop"
+            capture label variable cellpct`val' "`colby_lbl_`val'' Cell Pct"
+            capture label variable total_freq_for_var`val' "`colby_lbl_`val'' Total N for Var"
+            capture label variable colprop`val' "`colby_lbl_`val'' Col Prop"
+            capture label variable colpct`val' "`colby_lbl_`val'' Col Pct"
+            capture label variable N_col`val' "`colby_lbl_`val'' N for Col"
+            
+            capture confirm variable N_row`val' // Check if N_row was reshaped
+            if _rc == 0 {
+                capture label variable rowprop`val' "`colby_lbl_`val'' Row Prop"
+                capture label variable rowpct`val' "`colby_lbl_`val'' Row Pct"
+                capture label variable N_row`val' "`colby_lbl_`val'' N for Row"
+            }
         }
 
-        // Add overall statistics across columns
-        quietly ds freq*, has(type numeric)
-        quietly egen freq_all = rowtotal(`r(varlist)')
-        quietly egen total_all = total(freq_all), by(`rowby' varname)
-        quietly generate prop_all = freq_all / total_all
-        quietly generate pct_all = prop_all * 100
-        
-        label variable freq_all "Overall frequency"
-        label variable total_all "Overall total count"
-        label variable prop_all "Overall proportion"
-        label variable pct_all "Overall percentage (%)"
+        // Add overall frequency across columns. Other "overall" props/pcts are less direct now.
+        // `total_freq_for_var` should be consistent across reshaped columns for the same original `varname`.
+        quietly ds freq`colby_values[0]' // Check if freq* vars exist from reshape
+        if _rc == 0 { // only proceed if reshape created freq vars
+            quietly ds freq*, not(vallab varname varlab `rowby') // Get only reshaped freq vars
+            if "`r(varlist)'" != "" {
+                 quietly egen overall_freq = rowtotal(`r(varlist)')
+                 label variable overall_freq "Overall Frequency (sum over `colby')"
 
+                 // Overall cell proportion using the first reshaped total_freq_for_var
+                 // (assuming total_freq_for_var is consistent for a given varname across colby values)
+                 local first_col_val = `colby_values[1]' // Get the first value from the list
+                 capture confirm variable total_freq_for_var`first_col_val'
+                 if _rc == 0 {
+                    quietly generate overall_cellprop = overall_freq / total_freq_for_var`first_col_val'
+                    quietly generate overall_cellpct = overall_cellprop * 100
+                    label variable overall_cellprop "Overall Cell Prop (vs Var Total)"
+                    label variable overall_cellpct "Overall Cell Pct (vs Var Total)"
+                 }
+            }
+        }
     }
 
     // * yes/no transformation (if yesno specified)
-
     if "`yesno'" != "" {
         // Standardize value labels to lowercase
         quietly replace vallab = lower(vallab)
@@ -398,14 +469,35 @@ program define dtfreq
         quietly replace vallab = "_" + vallab
         
         // Determine which variables to reshape based on colby
-        if "`colby'" != "" {
-            quietly ds prop* pct* freq* total*, has(type numeric)
-        }
-        else {
-            quietly ds prop* pct* freq*, has(type numeric)
+        // Determine which variables to reshape based on current data structure
+        local yesno_reshape_vars_list "freq cellprop cellpct total_freq_for_var colprop colpct N_col overall_freq overall_cellprop overall_cellpct"
+        capture confirm variable N_row // or N_row`val` if colby was active
+        if _rc == 0 { // If N_row exists (meaning rowby was specified)
+             local yesno_reshape_vars_list "`yesno_reshape_vars_list' rowprop rowpct N_row"
         }
 
-        local reshape_vars "`r(varlist)'"
+        local current_vars_to_reshape // This will hold the actual existing variables for reshape
+        if "`colby'" != "" { // Variables have been reshaped by colby (e.g., freq1, freq2)
+            foreach basevar in `yesno_reshape_vars_list' {
+                quietly ds `basevar`*, not(vallab varname varlab `rowby') // find basevar1, basevar2 etc.
+                if "`r(varlist)'" != "" {
+                    local current_vars_to_reshape "`current_vars_to_reshape' `r(varlist)'"
+                }
+            }
+        }
+        else { // No colby, variables are in their original form (e.g. freq, cellprop)
+            foreach varname_chk in `yesno_reshape_vars_list' {
+                capture confirm variable `varname_chk'
+                if _rc == 0 {
+                    local current_vars_to_reshape "`current_vars_to_reshape' `varname_chk'"
+                }
+            }
+        }
+        
+        if "`current_vars_to_reshape'" == "" {
+            display as error "No variables found for yes/no reshape. Vars checked: `yesno_reshape_vars_list'"
+            // exit 198 // Or handle more gracefully
+        }
 
         // Store variable labels before reshape
         foreach var in `reshape_vars' {
@@ -417,33 +509,106 @@ program define dtfreq
         else if "`colby'" != "" quietly reshape wide prop* pct* freq* total*, i(`rowby' varname varlab) j(vallab) string
 
         // Apply new labels to reshaped yes/no variables
-        foreach val in `vallab_values' {
-            if "`colby'" != "" {
-                ds prop*`val' pct*`val' freq*`val' total*`val'
-                foreach var in `r(varlist)' {
-                    local base_var: subinstr local var "_`val'" "", all
-                    local original_label "``base_var'_label'"
-                    if "`original_label'" != "" label variable `var' "[`val'] `original_label'"
-                }
+        foreach val_yesno in `vallab_values' { // e.g. _yes, _no
+            foreach base_var_name in `current_vars_to_reshape' {
+                 local reshaped_yesno_var = "`base_var_name'`val_yesno'"
+                 capture confirm variable `reshaped_yesno_var'
+                 if _rc == 0 {
+                    local original_label "``base_var_name'_label'"
+                    if "`original_label'" != "" {
+                        label variable `reshaped_yesno_var' "[`val_yesno'] `original_label'"
+                    }
             }
             else {
-                quietly ds prop*`val'
-                foreach var in `r(varlist)' {
-                    label variable `var' "[`val'] Column proportion"
-                }
-                quietly ds pct*`val'
-                foreach var in `r(varlist)' {
-                    label variable `var' "[`val'] Column percentage (%)"
-                }
-                quietly ds freq*`val'
-                foreach var in `r(varlist)' {
-                    label variable `var' "[`val'] Frequency"
-                }
+                         label variable `reshaped_yesno_var' "[`val_yesno'] `base_var_name'" // Fallback label
+                    }
+                 }
             }
         }
-        
     }
 
+    // * formatting and final organization (stats & type options applied here)
+    // Add new options to syntax: stats(string asis) type(string asis)
+    // For now, assume they are added to syntax elsewhere. For this subtask, implement logic.
+    
+    // Default stats and type if not specified by user (example)
+    // if "`stats'" == "" local stats "cell row col" // Show all
+    // if "`type'" == "" local type "freq pct"    // Show freq and percent
+
+    // stats option handling (drop what's NOT requested)
+    // If "all" is in stats, none of these specific stat types are dropped.
+    if strpos("`stats'", "all") == 0 {
+        if strpos("`stats'", "row") == 0 {
+            capture drop rowprop*
+            capture drop rowpct*
+        }
+        if strpos("`stats'", "col") == 0 {
+            capture drop colprop*
+            capture drop colpct*
+        }
+        if strpos("`stats'", "cell") == 0 {
+            capture drop cellprop*
+            capture drop cellpct*
+        }
+    }
+    
+    // type option handling (drop what's NOT requested)
+    // If "all" is in type, none of these specific types are dropped.
+    if strpos("`type'", "all") == 0 {
+        if strpos("`type'", "prop") == 0 {
+            capture drop cellprop* rowprop* colprop* overall_cellprop*
+        }
+        if strpos("`type'", "pct") == 0 {
+            capture drop cellpct* rowpct* colpct* overall_cellpct*
+        }
+        if strpos("`type'", "freq") == 0 {
+            capture drop freq*  // Catches freq, freq1, freq_yes, etc.
+            capture drop overall_freq*
+        }
+    }
+
+    // Drop helper total variables N_* unless "all" is in stats or "all" is in type (implicitly keeping them if their stats/types are kept)
+    // Or more directly, if user hasn't asked for "all" stats, these are intermediate.
+    if strpos("`stats'", "all") == 0 {
+        capture drop N_col* N_row* total_freq_for_var*
+    }
+    // However, if a user asks for e.g. stats(cell) type(prop), they might implicitly want total_freq_for_var if it's used to derive cellprop.
+    // The logic above for 'stats' and 'type' already handles prop/pct/freq.
+    // Let's refine: N_* are purely denominators. Drop them if their specific stat type is not requested OR if "all" is not in stats.
+    // The previous stats block was: if strpos("`stats'", "row") == 0 { capture drop N_row* }
+    // This is better. The `total_freq_for_var` is tied to cell stats or freq.
+
+    // Revised N_* dropping logic based on subtask point 4, applied AFTER specific stat/type drops.
+    // This means if, for example, rowprop was kept, N_row would still be dropped here unless we make it conditional.
+    // Subtask says: "explicitly drop the intermediate total variables".
+    // This suggests they are always dropped if not part of "all".
+    // Let's try a simpler approach for N_* vars: drop them if "all" is not in stats.
+    // If stats(all) is present, they are kept. Otherwise, they are considered intermediate.
+    // The specific proportions/percentages are handled by the main stat/type logic.
+    
+    // Final decision for N_* vars: Drop them if "all" is not in `stats`.
+    // This is because they are denominators; their direct value is rarely reported unless for debugging or full data.
+    if strpos("`stats'", "all") == 0 {
+        capture drop N_col*
+        capture drop N_row*
+        capture drop total_freq_for_var*
+    }
+
+
+    // Final Ordering
+    local final_order_vars `rowby' `colby' varname varlab vallab 
+    // Add variables that might exist, in preferred order
+    // N_* vars and total_freq_for_var* are removed from this list as they are likely dropped.
+    local potential_vars "freq* overall_freq* cellpct* rowpct* colpct* overall_cellpct* cellprop* rowprop* colprop* overall_cellprop*"
+    
+    foreach pvar in `potential_vars' {
+        quietly ds `pvar', not(vallab varname varlab `rowby' `colby') // Check if vars matching pattern exist
+        if "`r(varlist)'" != "" {
+            local final_order_vars "`final_order_vars' `r(varlist)'"
+        }
+    }
+    capture order `final_order_vars'
+        
     // * stats and type options handling
     // make the percentage and proportion
     rename (prop* pct*) (colprop* colpct*)
