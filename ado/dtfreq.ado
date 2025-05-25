@@ -1,15 +1,39 @@
 capture program drop dtfreq
 program define dtfreq
-    *! Version 1.0.0 Hafiz 25May2025
+    *! Version 1.1.0 Hafiz 25May2025
     * Module to produce frequency dataset
 
     version 16
-    syntax varlist(min=1 numeric) [if] [in] [aweight fweight iweight pweight] [using/] [, df(string) ROWby(varname numeric) COLby(varname numeric) Yesno FOrmat(string) noMISS FAst Exopt(string)]
+    syntax varlist(min=1 numeric) [if] [in] [aweight fweight iweight pweight] [using/] [, df(string) ROWby(varname numeric) COLby(varname numeric) Yesno FOrmat(string) noMISS FAst Exopt(string) STATs(string) TYpe(string)]
 
     // * initialization and validation
     // Set default frame name
     if "`df'" == "" local df "_df"
+
+    // Set defaults for stats and type options
+    if "`stats'" == "" local stats "col"
+    if "`type'" == "" local type "prop"
+
+    // Validate stats option
+    local valid_stats "row col cell"
+    local stats_clean = strtrim(strlower("`stats'"))
+    foreach stat in `stats_clean' {
+        if !`: list stat in valid_stats' {
+            display as error "Invalid stats option: `stat'. Valid options are: `valid_stats'"
+            exit 198
+        }
+    }
     
+    // Validate type option  
+    local valid_types "prop pct"
+    local type_clean = strtrim(strlower("`type'"))
+    foreach t in `type_clean' {
+        if !`: list t in valid_types' {
+            display as error "Invalid type option: `t'. Valid options are: `valid_types'"
+            exit 198
+        }
+    }
+
     // Store current frame for cleanup
     quietly pwf
     local currentframe = r(currentframe)
@@ -189,10 +213,10 @@ program define dtfreq
         generate pct = prop * 100
         
         // Add descriptive variable labels
-        label variable prop "Proportion"
+        label variable prop "Column proportion"
         label variable total "Total"
         label variable freq "Frequency"
-        label variable pct "Percent (%)"
+        label variable pct "Column percentage (%)"
 
         // Keep only non-missing observations for current variable
         quietly keep if !missing(`var')
@@ -206,34 +230,39 @@ program define dtfreq
         // Handle value labels vs. string conversion
         if "`: value label `var''" != "" {
             quietly decode `var', generate(temp_decoded)
-            quietly replace vallab = temp_decoded
+            quietly replace vallab = temp_decoded if missing(vallab)
+            sort `var', stable
             quietly drop temp_decoded
         }
-        else {
-            // If yesno option, convert any 2-value variable to no/yes
-            if "`yesno'" != "" {
+        if "`: value label `var''" == "" {
+            quietly tostring `var', generate(temp_string)
+            quietly replace vallab = temp_string if missing(vallab)
+            sort `var', stable
+            quietly drop temp_string
+        }
+        // If yesno option, convert any 2-value variable to no/yes
+        if "`yesno'" != "" {
 
-                quietly levelsof `var', local(unique_vals)
-                local n_vals: word count `unique_vals'
+            quietly levelsof `var', local(unique_vals)
+            local n_vals: word count `unique_vals'
+            
+            if `n_vals' == 2 {
+                local val1: word 1 of `unique_vals'
+                local val2: word 2 of `unique_vals'
                 
-                if `n_vals' == 2 {
-                    local val1: word 1 of `unique_vals'
-                    local val2: word 2 of `unique_vals'
-                    
-                    // Sort values to ensure consistent assignment (lower=no, higher=yes)
-                    if `val1' > `val2' {
-                        local temp `val1'
-                        local val1 `val2'
-                        local val2 `temp'
-                    }
-                    
-                    // Inform user about the conversion
-                    display as text "Note: Variable `var' has no value labels. " ///
-                        "Treating value `val1' as 'no' and value `val2' as 'yes'"
-                    
-                    quietly replace vallab = "no" if `var' == `val1'
-                    quietly replace vallab = "yes" if `var' == `val2'
+                // Sort values to ensure consistent assignment (lower=no, higher=yes)
+                if `val1' > `val2' {
+                    local temp `val1'
+                    local val1 `val2'
+                    local val2 `temp'
                 }
+                
+                // Inform user about the conversion
+                display as text "Note: Variable `var' has no value labels. " ///
+                    "Treating value `val1' as 'no' and value `val2' as 'yes'"
+                
+                quietly replace vallab = "no" if `var' == `val1'
+                quietly replace vallab = "yes" if `var' == `val2'
             }
         }
 
@@ -267,6 +296,19 @@ program define dtfreq
             exit 198
         }
 
+        // Create numeric sort key to preserve order through reshape
+        quietly generate _numeric_sort = .
+        quietly levelsof varname, local(all_vars) clean
+        foreach var in `all_vars' {
+            quietly levelsof vallab if varname == "`var'", local(var_vallabs) clean
+            foreach vallabval in `var_vallabs' {
+                // Try to extract numeric value from vallab
+                if real("`vallabval'") != . {
+                    quietly replace _numeric_sort = real("`vallabval'") if varname == "`var'" & vallab == "`vallabval'"
+                }
+            }
+        }
+
         // Store column labels for later use
         foreach val of local colby_values {
             local colby_lbl_`val' : label (`colby') `val', strict
@@ -281,11 +323,15 @@ program define dtfreq
             exit _rc
         }
 
+        // Sort by the preserved numeric order
+        sort varname _numeric_sort
+        drop _numeric_sort
+
         foreach val of local colby_values {
             capture label variable freq`val' "`colby_lbl_`val''"
             capture label variable total`val' "Total `colby_lbl_`val''"
-            capture label variable prop`val' "Proportion `colby_lbl_`val''"
-            capture label variable pct`val' "Percent `colby_lbl_`val'' (%)"
+            capture label variable prop`val' "Column proportion `colby_lbl_`val''"
+            capture label variable pct`val' "Column percentage `colby_lbl_`val'' (%)"
         }
 
         // Add overall statistics across columns
@@ -299,8 +345,6 @@ program define dtfreq
         label variable total_all "Overall total count"
         label variable prop_all "Overall proportion"
         label variable pct_all "Overall percentage (%)"
-
-        order `rowby' varname varlab vallab prop* pct* var* total*
 
     }
 
@@ -356,11 +400,11 @@ program define dtfreq
             else {
                 quietly ds prop*`val'
                 foreach var in `r(varlist)' {
-                    label variable `var' "[`val'] Proportion"
+                    label variable `var' "[`val'] Column proportion"
                 }
                 quietly ds pct*`val'
                 foreach var in `r(varlist)' {
-                    label variable `var' "[`val'] Percent (%)"
+                    label variable `var' "[`val'] Column percentage (%)"
                 }
                 quietly ds freq*`val'
                 foreach var in `r(varlist)' {
@@ -369,10 +413,64 @@ program define dtfreq
             }
         }
         
-        // Reorder variables for better presentation
-        order prop* pct* freq* total*, last alpha
-        order prop* pct* freq* total*, last
     }
+
+    // * stats and type options handling
+    // make the percentage and proportion
+    rename (prop* pct*) (colprop* colpct*)
+    rename (col*all) (*all)
+
+    foreach var of varlist freq* {
+        if strpos("`var'", "all") > 0 continue
+        local varsuffix = subinstr("`var'", "freq", "", .)
+        quietly {
+            generate rowprop`varsuffix' = `var' / freq_all
+            generate rowpct`varsuffix' = `var' / freq_all * 100
+            generate cellprop`varsuffix' = `var' / total_all
+            generate cellpct`varsuffix' = `var' / total_all * 100
+        }
+    }
+
+    // labeling
+    foreach var1 of varlist colprop* colpct* {
+        local basename1 = subinstr("`var1'", "col", "", .)
+        local baselab: variable label `var1'
+        foreach var2 of varlist rowprop* rowpct* cellprop* cellpct* {
+            if strpos("`var2'", "row") > 0 local basename2 = subinstr("`var2'", "row", "", .)
+            else if strpos("`var2'", "cell") > 0 local basename2 = subinstr("`var2'", "cell", "", .)
+            if "`basename1'" == "`basename2'" {
+                if strpos("`var2'", "row") > 0 local varlab = subinstr("`baselab'", "Column", "Row", .)
+                else if strpos("`var2'", "cell") > 0 local varlab = subinstr("`baselab'", "Column", "Cell", .)
+                label variable `var2' "`varlab'"
+            }
+        }
+    }
+
+    foreach var of varlist *prop* *pct* {
+        if strpos("`var'", "all") > 0 continue
+        local varlab: variable label `var'
+        // assign the same label with col
+        if "`varlab'" != "" label variable `var' "`varlab'"
+        if strpos("`var'", "row") > 0 {
+            local varlab: variable label `var'
+            local varlab = subinstr("`varlab'", "Column", "Row", .)
+            label variable `var' "`varlab'"
+        }
+        else if strpos("`var'", "cell") > 0 {
+            local varlab: variable label `var'
+            local varlab = subinstr("`varlab'", "Column", "Cell", .)
+            label variable `var' "`varlab'"
+        }
+    }
+
+    // order and drop variables
+    order `rowby' varname varlab vallab *prop* *pct* freq* total*, alpha
+    order *prop* *pct* freq* total*, last
+    if strpos("`stats'", "row") == 0 quietly drop row*
+    if strpos("`stats'", "col") == 0 quietly drop col*
+    if strpos("`stats'", "cell") == 0 quietly drop cell*
+    if strpos("`type'", "prop") == 0 quietly drop *prop*
+    if strpos("`type'", "pct") == 0 quietly drop *pct*
 
     // * formatting and final organization
     if `"`format'"' == "" {
@@ -380,7 +478,9 @@ program define dtfreq
         foreach var in `r(varlist)' {
             capture assert `var' == round(`var')
             if _rc == 9 {
-                quietly format %20.1fc `var'
+                quietly summarize `var'
+                if `=scalar(r(min))' >= 0 & `=scalar(r(max))' <= 1 quietly format %6.3fc `var'
+                else quietly format %20.1fc `var'
             }
             else if _rc == 0 {
                 quietly format %20.0fc `var'
@@ -394,12 +494,10 @@ program define dtfreq
         }
     }
 
-    capture order `rowby' varname varlab vallab prop* pct* var* total*
-    
     // Add standard variable labels
     capture label variable varname "Variable"
     capture label variable varlab "Variable label"
-    capture label variable vallab "Value"
+    capture label variable vallab "Value label"
 
     // Apply row labels if rowby was specified
     if "`rowby'" != "" {
@@ -412,6 +510,7 @@ program define dtfreq
         }
         label values `rowby' `varupper'
     }
+
     
     // * export to excel
     if "`using'" != "" {
