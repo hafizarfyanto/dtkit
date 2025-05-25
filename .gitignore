@@ -1,0 +1,9 @@
+# Test folder
+test/
+
+# Other common files to ignore (optional)
+*.log
+*.tmp
+~*
+.DS_Store
+Thumbs.db
