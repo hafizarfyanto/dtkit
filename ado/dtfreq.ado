@@ -58,23 +58,26 @@ program define _xtab
         }
         frame copy `_temp' _df, replace
     }
+    
+    // give labels
+    give_varlab, df(_df) rowby(`rowby') colby(`colby') source_frame(`source_frame')
 end
 
 // * tabulate, calculate matrices, and reshape
 program define _xtab_core
-    syntax, var(varname) varlab(string) stratum_label(string) source_frame(name) ///
-        [rowby(varname) colby(varname) if_condition(string)]
-
-    frame `source_frame': quietly levelsof `var' `if_condition', local(vallabels)
+    // use name instead of varname
+    syntax, var(name) varlab(string) stratum_label(string) source_frame(name) ///
+        [rowby(name) colby(name) if_condition(string)]
     
+    frame `source_frame': quietly levelsof `var' `if_condition', local(vallabels)
     // Create tabulation with if condition
-    if "`colby'" != "" local tabcmd "quietly tabulate `var' `colby' `if_condition', matcell(_FREQ) matcol(_COLVAL)" // Two-way tabulation
-    else local tabcmd "quietly tabulate `var' `if_condition', matcell(_FREQ)" // One-way tabulation 
+    if "`colby'" != "" local tabcmd "quietly tabulate `var' `colby' `if_condition', matcell(_FREQ) matrow(_ROWVAL) matcol(_COLVAL)" // Two-way tabulation
+    else local tabcmd "quietly tabulate `var' `if_condition', matcell(_FREQ) matrow(_ROWVAL)" // One-way tabulation 
     frame `source_frame': `tabcmd'
     
     // Call mata function
     mata: _xtab_calc()
-    
+
     // Build variable names - match matrix structure
     local varnamelist "numlab"
     
@@ -134,6 +137,7 @@ mata:
 void _xtab_calc()
 {
     _FREQ = st_matrix("_FREQ")
+    _ROWVAL = st_matrix("_ROWVAL")
     
     // Check if this is one-way or two-way
     if (st_local("colby") == "") {
@@ -196,42 +200,49 @@ end
 // * attach variable labels
 program define give_varlab
 
-    syntax, df(name) rowby(name) colby(name) source_frame(name)
-    // standard vars
-    frame _df: label variable varname "Variable"
-    frame _df: label variable varlab "Variable label"
-    frame _df: capture label variable vallab "Value"
+    syntax, [df(name) rowby(name) colby(name) source_frame(name)]
+    di "df: `df'. rowby: `rowby'. colby: `colby'. source_frame: `source_frame'"
+    // standard vars/vars in one-way
+    frame `df' {
+        label variable varname "Variable"
+        label variable varlab "Variable label"
+        capture label variable vallab "Value"
+        capture label variable freq "Frequency"
+        capture label variable prop "Proportion"
+        capture label variable total "Total"
+    }
 
     // rowby specified
-    // if "`rowby'" != "" {
-    //     frame `source_frame': local rowby_varlab: variable label `rowby' 
-    //     frame `source_frame': label variable `rowby' "`rowby_varlab'"
-    // }
-    // labeling reshaped variables
-    foreach val in `vallab_value' {
-        // local val = strlower("`val'")
-        if "`colby'" != "" {
-            quietly ds freq*`val' col*`val' rowprop*`val' rowfreq_`val' cell*`val'
-            foreach reshapevar in `r(varlist)' {
-                local reshapevar `reshapevar'
-                local base_var: subinstr local reshapevar "_`val'" "", all
-                local suffix: subinstr local val "_" "", word
-                local original_label "``base_var'_label'"
-                if "`original_label'" != "" label variable `reshapevar' "[`val'] `original_label'"
-                else label variable `reshapevar' "[`suffix'] `base_var'"
-            }
-        }
-        else if "`colby'" == "" {
-            quietly ds prop*`val' 
-            for var `r(varlist)': label variable X "[`val'] Proportion"
-            quietly ds freq*`val'
-            for var `r(varlist)': label variable X "[`val'] Frequency"
-        }
+    if "`rowby'" != "" {
+        frame `source_frame': local rowby_varlab: variable label `rowby' 
+        frame `df': label variable `rowby' "`rowby_varlab'"
     }
+    // colby specified
+    if "`colby'" != "" {
+        frame `source_frame': levelsof `colby', local(colby_values)
+        foreach val in `colby_values' {
+            frame `source_frame': local colby_lbl_`val': label (`colby') `val'            
+            frame `df': label variable freq`val' "Frequency `colby_lbl_`val''"
+            frame `df': label variable total`val' "Total `colby_lbl_`val''"
+            frame `df': label variable rowprop`val' "Row proportion `colby_lbl_`val''"
+            frame `df': label variable colprop`val' "Column proportion `colby_lbl_`val''"
+            frame `df': label variable cellprop`val' "Cell proportion `colby_lbl_`val''"
+        }
+        frame `df': label variable rowfreq "Overall row frequency"
+        frame `df': label variable total_all "Overall total count"
+    }
+
+            // else if "`colby'" == "" {
+            //     quietly ds prop*`val' 
+            //     for var `r(varlist)': label variable X "[`val'] Proportion"
+            //     quietly ds freq*`val'
+            //     for var `r(varlist)': label variable X "[`val'] Frequency"
+            // }
 
 end
 
 clear frames
 sysuse nlsw88, clear
-_xtab, var(married) rowby(south) //colby(race)
+desc married
+_xtab, var(married) rowby(south) colby(race)
 frame _df: desc
