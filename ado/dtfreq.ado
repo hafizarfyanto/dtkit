@@ -1,4 +1,7 @@
-capture program drop _xtab _xtab_core process_binary
+local proglist _xtab _xtab_core reshape_binary give_varlab
+foreach prog in `proglist' {
+    capture program drop `prog'
+}
 capture mata: mata drop _xtab_calc()
 
 // subroutine
@@ -28,7 +31,9 @@ program define _xtab
             
             // Run analysis for this level
             frame `_temp' {
-                _xtab_core "`var'" "`colby'" "`varlab'" "`rowby_label'" `source_frame' "if `rowby' == `level'"
+                _xtab_core, var(`var') rowby(`rowby') colby(`colby') ///
+                    varlab(`varlab') stratum_label(`rowby_label') ///
+                    source_frame(`source_frame') if_condition("if `rowby' == `level'")
                 tempfile _result
                 quietly save `_result'
             }
@@ -37,7 +42,8 @@ program define _xtab
         
         // Add totals (all data)
         frame `_temp' {
-            _xtab_core "`var'" "`colby'" "`varlab'" "Total" `source_frame' ""
+            _xtab_core, var(`var') colby(`colby') varlab(`varlab') ///
+                stratum_label("Total") source_frame(`source_frame')
             tempfile _result
             quietly save `_result'
         }
@@ -47,15 +53,17 @@ program define _xtab
     else {
         // No rowby - just run once
         frame `_temp' {
-            _xtab_core "`var'" "`colby'" "`varlab'" "Total" `source_frame' ""
+            _xtab_core, var(`var') colby(`colby') varlab(`varlab') ///
+                stratum_label("Total") source_frame(`source_frame')
         }
         frame copy `_temp' _df, replace
     }
 end
 
+// * tabulate, calculate matrices, and reshape
 program define _xtab_core
-    // processing core function in temporary frame
-    args var colby varlab stratum_label source_frame if_condition
+    syntax, var(varname) varlab(string) stratum_label(string) source_frame(name) ///
+        [rowby(varname) colby(varname) if_condition(string)]
 
     frame `source_frame': quietly levelsof `var' `if_condition', local(vallabels)
     
@@ -91,7 +99,7 @@ program define _xtab_core
         
         generate varname = "`var'", before(numlab)
         generate varlab = "`varlab'", before(numlab)
-        generate rowval = "`stratum_label'", before(numlab)
+        capture generate `rowby' = "`stratum_label'", before(numlab)
         generate vallab = "", before(numlab)
     }
 
@@ -118,9 +126,10 @@ program define _xtab_core
         egen total = total(freq)
     }
     drop numlab
-    process_binary, rowby(`rowby') colby(`colby')
+    // reshape_binary, rowby(`rowby') colby(`colby')
 end
 
+// * calculate row, column, and cell proportions
 mata:
 void _xtab_calc()
 {
@@ -152,9 +161,8 @@ void _xtab_calc()
 }
 end
 
-// * transform binary data (formerly yesno)
-program define process_binary
-
+// * reshape binary data (formerly yesno)
+program define reshape_binary
     syntax, [rowby(name) colby(name)]
     
     quietly replace vallab = strlower(subinstr(vallab, " ", "_", .))
@@ -183,6 +191,22 @@ program define process_binary
         quietly reshape wide freq* col* rowprop* rowfreq cell*, i(rowval varname varlab) j(vallab) string
     }
 
+end
+
+// * attach variable labels
+program define give_varlab
+
+    syntax, df(name) rowby(name) colby(name) source_frame(name)
+    // standard vars
+    frame _df: label variable varname "Variable"
+    frame _df: label variable varlab "Variable label"
+    frame _df: capture label variable vallab "Value"
+
+    // rowby specified
+    // if "`rowby'" != "" {
+    //     frame `source_frame': local rowby_varlab: variable label `rowby' 
+    //     frame `source_frame': label variable `rowby' "`rowby_varlab'"
+    // }
     // labeling reshaped variables
     foreach val in `vallab_value' {
         // local val = strlower("`val'")
@@ -204,10 +228,10 @@ program define process_binary
             for var `r(varlist)': label variable X "[`val'] Frequency"
         }
     }
-end
 
+end
 
 clear frames
 sysuse nlsw88, clear
-_xtab, var(married) rowby(south) colby(race)
+_xtab, var(married) rowby(south) //colby(race)
 frame _df: desc
