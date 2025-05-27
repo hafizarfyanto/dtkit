@@ -43,6 +43,13 @@ program define dtfreq
     // give labels
     _labelvars, df(`df') by(`by') cross(`cross') source_frame(`source_frame') binary(`binary')
 
+    // format vars
+    frame `df': quietly ds *, has(type numeric)
+    if "`format'" == "" {
+        frame `df': _formatvars `r(varlist)'
+    }
+    else format `r(varlist)' `format' 
+
     // export to excel
     if "`using'" != "" {
         local inputfile = subinstr(`"`using'"', `"""', "", .)
@@ -303,6 +310,113 @@ program define _toexcel
         export excel using `exportcmd'
     }
 
+end
+
+* Program to automatically format numeric variables based on data characteristics
+capture program drop _formatvars
+program define _formatvars
+    syntax varlist, [report]
+    foreach var of local varlist {
+        // skip string vars
+        local vartype: type `var'
+        if substr("`vartype'",1,3) == "str" continue
+
+        * Check if variable has date-time format and skip if so
+        local current_fmt : format `var'
+        if regexm("`current_fmt'", "^%t[cCdwmqhy].*") | regexm("`current_fmt'", "^%d.*") {
+            if "`report'" != "" display "Variable `var': Skipping date-time format (`current_fmt')"
+            continue
+        }
+        
+        * Get summary statistics
+        quietly summarize `var', meanonly
+        local max_val = r(max)
+        local min_val = r(min)
+        
+        * Check if variable has value labels
+        local vallbl : value label `var'
+        local left_just = ("`vallbl'" != "")
+        
+        * Check if variable has decimal parts
+        capture assert `var' == round(`var') if !missing(`var')
+        local has_decimals = (_rc == 9)
+        
+        * Determine format based on rules
+        local format_str ""
+        
+        * Rule 2: Proportions (0 to 1 range) - 3 decimal places
+        if `max_val' <= 1 & `min_val' >= 0 {
+            local width = 5 + 2  // "0.123" = 5 characters + 2 buffer
+            if `left_just' {
+                local format_str "%-`width'.3f"
+            }
+            else {
+                local format_str "%`width'.3f"
+            }
+            if "`report'" != "" display "Variable `var': Detected as proportion, using format `format_str'"
+        }
+        
+        * Rule 1 & 3: Large numbers (>=1000)
+        else if `max_val' >= 1000 & !missing(`max_val') {
+            * Calculate width needed for largest number
+            local max_digits = floor(log10(`max_val')) + 1
+            local commas = floor((`max_digits' - 1) / 3)
+            
+            if `has_decimals' {
+                * Rule 1 + 3: Large numbers with decimals (1 decimal place + comma)
+                local width = `max_digits' + `commas' + 2 + 2  // +2 for ".X", +2 buffer
+                if `left_just' {
+                    local format_str "%-`width'.1fc"
+                }
+                else {
+                    local format_str "%`width'.1fc"
+                }
+                if "`report'" != "" display "Variable `var': Large number with decimals, using format `format_str'"
+            }
+            else {
+                * Rule 1: Large integers (no decimal places + comma)
+                local width = `max_digits' + `commas' + 2  // +2 buffer
+                if `left_just' {
+                    local format_str "%-`width'.0fc"
+                }
+                else {
+                    local format_str "%`width'.0fc"
+                }
+                if "`report'" != "" display "Variable `var': Large integer, using format `format_str'"
+            }
+        }
+        
+        * Smaller numbers (<1000)
+        else {
+            local max_digits = max(1, floor(log10(max(abs(`max_val'), abs(`min_val')))) + 1)
+            
+            if `has_decimals' {
+                * Small numbers with decimals (1 decimal place, no comma)
+                local width = `max_digits' + 2 + 2  // +2 for ".X", +2 buffer
+                if `left_just' {
+                    local format_str "%-`width'.1f"
+                }
+                else {
+                    local format_str "%`width'.1f"
+                }
+                if "`report'" != "" display "Variable `var': Small number with decimals, using format `format_str'"
+            }
+            else {
+                * Small integers (no decimal places, no comma)
+                local width = `max_digits' + 2  // +2 buffer
+                if `left_just' {
+                    local format_str "%-`width'.0f"
+                }
+                else {
+                    local format_str "%`width'.0f"
+                }
+                if "`report'" != "" display "Variable `var': Small integer, using format `format_str'"
+            }
+        }
+        
+        * Apply the format
+        format `var' `format_str'
+    }
 end
 
 // * argument checking and validation
