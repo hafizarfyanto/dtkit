@@ -9,7 +9,7 @@ program define dtfreq
     *! Version 2.0.0 Hafiz 27May2025
     * Module to produce frequency dataset
     version 16
-    syntax varlist(min=1 numeric) [if] [in] [aweight fweight iweight pweight] [using/] [, df(string) by(varname numeric) cross(varname numeric) BINary FOrmat(string) noMISS Exopt(string)]
+    syntax varlist(min=1 numeric) [if] [in] [aweight fweight iweight pweight] [using/] [, df(string) by(varname numeric) cross(varname numeric) BINary FOrmat(string) noMISS Exopt(string) STATs(string) TYpe(string)]
 
     // Validate arguments and get returned parameters
     _argcheck `varlist' `if' `in' [`weight'`exp'], df(`df') by(`by') cross(`cross') `binary' format(`format') `miss' using(`using') exopt(`exopt')
@@ -49,6 +49,15 @@ program define dtfreq
         frame `df': _formatvars `r(varlist)'
     }
     else format `r(varlist)' `format' 
+
+    // drop variables
+    frame `df': order *prop* *pct* freq* total*, last
+    if strpos("`stats'", "row") == 0 frame `df': capture drop row*
+    if strpos("`stats'", "col") == 0 frame `df': capture drop col*
+    if strpos("`stats'", "cell") == 0 frame `df': capture drop cell*
+    if strpos("`type'", "prop") == 0 frame `df': capture drop *prop*
+    if strpos("`type'", "pct") == 0 frame `df': capture drop *pct*
+
 
     // export to excel
     if "`using'" != "" {
@@ -170,6 +179,13 @@ program define _xtab_core
         if "`vallabval'" == "" local vallabval "`val'"
         quietly replace vallab = "`vallabval'" if numlab == `val'
     }
+
+    // calculate percentage
+    quietly ds *prop*, has(type numeric)
+    foreach var in `r(varlist)' {
+        local pctname: subinstr local var "prop" "pct"
+        quietly generate `pctname' = `var' * 100
+    }
     
     // Calculate totals
     if "`cross'" != "" {
@@ -199,7 +215,7 @@ program define _binreshape
     quietly replace vallab = "_" + strlower(vallab)
 
     // Determine which variables to reshape based on cross
-    if "`cross'" != "" quietly ds freq* col* rowprop* rowfreq cell*, has(type numeric)
+    if "`cross'" != "" quietly ds freq* col* row* cell*, has(type numeric)
     else quietly ds freq prop, has(type numeric)
 
     local reshape_vars `r(varlist)'
@@ -217,7 +233,7 @@ program define _binreshape
         foreach numvar in `r(varlist)' {
             local `numvar'_varlab: variable label `numvar'
         }
-        quietly reshape wide freq* col* rowprop* rowfreq cell*, i(`by' varname varlab) j(vallab) string
+        quietly reshape wide freq* col* row* cell*, i(`by' varname varlab) j(vallab) string
     }
 
 end
@@ -268,7 +284,7 @@ program define _labelvars
     else if "`binary'" != "" & "`cross'" != "" {
         // get value and variable label from cross
         frame `source_frame': quietly levelsof `cross', local(cross_values)
-        frame `df': quietly ds freq* col* rowprop* rowfreq* cell*
+        frame `df': quietly ds freq* col* row* cell*
         foreach reshapevars in `r(varlist)' {
             frame `df': local `reshapevars'_varlab: variable label `reshapevars'
             local `reshapevars'_varlab: subinstr local `reshapevars'_varlab "_" "["
@@ -284,6 +300,9 @@ program define _labelvars
             local `reshapevars'_varlab: subinstr local `reshapevars'_varlab "colprop" "Column proportion | ", word
             local `reshapevars'_varlab: subinstr local `reshapevars'_varlab "rowprop" "Row proportion | ", word
             local `reshapevars'_varlab: subinstr local `reshapevars'_varlab "cellprop" "Cell proportion | ", word
+            local `reshapevars'_varlab: subinstr local `reshapevars'_varlab "colpct" "Column percentage (%) | ", word
+            local `reshapevars'_varlab: subinstr local `reshapevars'_varlab "rowpct" "Row percentage (%) | ", word
+            local `reshapevars'_varlab: subinstr local `reshapevars'_varlab "cellpct" "Cell percentage (%) | ", word
             local `reshapevars'_varlab: subinstr local `reshapevars'_varlab "rowfreq" "Row frequency"
             frame `df': label variable `reshapevars' "``reshapevars'_varlab'"
         }
@@ -427,8 +446,7 @@ program define _argcheck, rclass
            fullpath(string) filename(string) extension(string)]
 
 
-    // * Validate options
-    // Validate stats option
+    // * Validate stats and type options
     local valid_stats "row col cell all"
     local stats_clean = strtrim(strlower("`stats'"))
     foreach stat in `stats_clean' {
@@ -438,8 +456,7 @@ program define _argcheck, rclass
         }
     }
     
-    // Validate type option  
-    local valid_types "prop pct freq all"
+    local valid_types "prop pct all"
     local type_clean = strtrim(strlower("`type'"))
     foreach t in `type_clean' {
         if !`: list t in valid_types' {
@@ -465,6 +482,13 @@ program define _argcheck, rclass
         display as error "by() variable and cross() variable cannot be the same."
         exit 198
     }
+
+    // ensure stats can only be used with cross
+    if "`stats'" != "" & "`cross'" == "" {
+        display as error "stats() option is only allowed when cross() is also specified."
+        exit 198
+    }
+
 
     // * Binary option validation (enhanced with label consistency)
     if "`binary'" != "" {
@@ -600,5 +624,5 @@ end
 clear frames
 sysuse nlsw88, clear
 desc married
-dtfreq married, binary by(south) cross(race)
+dtfreq married, by(south) cross(race) stats(cok) type(asu)
 frame _df: desc
