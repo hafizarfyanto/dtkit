@@ -1,87 +1,107 @@
-local proglist _xtab _xtab_core _binreshape _labelvars
+local proglist dtfreq _xtab _xtab_core _xtab_core _binreshape _labelvars
 foreach prog in `proglist' {
     capture program drop `prog'
 }
-capture mata: mata drop _xtab_calc()
+capture mata: mata drop _xtab_core_calc()
 
 // subroutine
-program define _xtab
+program define dtfreq
+    *! Version 2.0.0 Hafiz 27May2025
+    * Module to produce frequency dataset
     version 16
-    syntax, var(varname) [colby(varname) rowby(varname) binary]
-    
+    syntax varlist(min=1 numeric) [if] [in] [aweight fweight iweight pweight] [using/] [, df(string) by(varname numeric) cross(varname numeric) BINary FOrmat(string) noMISS Exopt(string)]
+
+    // Set default frame name
+    if "`df'" == "" local df "_df"
+    if "`stats'" == "" local stats "col"
+    if "`type'" == "" local type "prop"
+
     // Store original frame name and create working frames
     local source_frame = c(frame)
-    capture frame drop _df
-    frame create _df
+    capture frame drop `df'
+    frame create `df'
     tempname _temp
     frame create `_temp'
-    
-    // Get variable label from main data
-    local `var'_varlab: variable label `var'
-    if "`varlab'" == "" local varlab "`var'"
-    
-    // If rowby specified, process each level separately  
-    if "`rowby'" != "" {
-        frame `source_frame': quietly levelsof `rowby', local(rowby_levels)
+
+    // tabulation
+    _xtab `varlist', df(`df') by(`by') cross(`cross') binary(`binary') source_frame(`source_frame') temp_frame(`_temp')
+
+    // give labels
+    _labelvars, df(`df') by(`by') cross(`cross') source_frame(`source_frame') binary(`binary')
+end
+
+// execute xtab
+program define _xtab
+    syntax varlist(min=1 numeric) [, df(string) by(name) cross(name) binary(name) source_frame(name) temp_frame(name)]
+
+    foreach var of local varlist {
+
+        // Get variable label from main data
+        local `var'_varlab: variable label `var'
+        if "`varlab'" == "" local varlab "`var'"
         
-        foreach level in `rowby_levels' {
-            // Get rowby label from main frame
-            frame `source_frame': local rowby_label: label (`rowby') `level'
-            if "`rowby_label'" == "" local rowby_label "`level'"
+        // If by specified, process each level separately  
+        if "`by'" != "" {
+            frame `source_frame': quietly levelsof `by', local(by_levels)
             
-            // Run analysis for this level
-            frame `_temp' {
-                _xtab_core, var(`var') rowby(`rowby') colby(`colby') ///
-                    varlab(`varlab') stratum_label(`rowby_label') ///
-                    source_frame(`source_frame') binary(`binary') if_condition("if `rowby' == `level'")
+            foreach level in `by_levels' {
+                // Get by label from main frame
+                frame `source_frame': local by_label: label (`by') `level'
+                if "`by_label'" == "" local by_label "`level'"
+                
+                // Run analysis for this level
+                frame `temp_frame' {
+                    _xtab_core, var(`var') by(`by') cross(`cross') ///
+                        varlab(`varlab') stratum_label(`by_label') ///
+                        source_frame(`source_frame') binary(`binary') if_condition("if `by' == `level'")
+                    tempfile _result
+                    quietly save `_result'
+                }
+                frame _df: quietly append using `_result'
+            }
+            
+            // Add totals (all data)
+            frame `temp_frame' {
+                _xtab_core, var(`var') cross(`cross') varlab(`varlab') ///
+                    stratum_label("Total") binary(`binary') source_frame(`source_frame')
                 tempfile _result
                 quietly save `_result'
             }
             frame _df: quietly append using `_result'
+            
         }
-        
-        // Add totals (all data)
-        frame `_temp' {
-            _xtab_core, var(`var') colby(`colby') varlab(`varlab') ///
-                stratum_label("Total") binary(`binary') source_frame(`source_frame')
-            tempfile _result
-            quietly save `_result'
+        else {
+            // No by - just run once
+            frame `temp_frame' {
+                _xtab_core, var(`var') cross(`cross') varlab(`varlab') ///
+                    stratum_label("Total") binary(`binary') source_frame(`source_frame')
+            }
+            frame copy `temp_frame' _df, replace
         }
-        frame _df: quietly append using `_result'
-        
+
     }
-    else {
-        // No rowby - just run once
-        frame `_temp' {
-            _xtab_core, var(`var') colby(`colby') varlab(`varlab') ///
-                stratum_label("Total") binary(`binary') source_frame(`source_frame')
-        }
-        frame copy `_temp' _df, replace
-    }
-    
-    // give labels
-    _labelvars, df(_df) rowby(`rowby') colby(`colby') source_frame(`source_frame') binary(`binary')
+
 end
 
 // * tabulate, calculate matrices, and reshape
 program define _xtab_core
     // use name instead of varname
     syntax, var(name) varlab(string) stratum_label(string) source_frame(name) ///
-        [rowby(name) colby(name) binary(name) if_condition(string)]
+        [by(name) cross(name) binary(name) if_condition(string)]
     
     frame `source_frame': quietly levelsof `var' `if_condition', local(vallabels)
     // Create tabulation with if condition
-    if "`colby'" != "" local tabcmd "quietly tabulate `var' `colby' `if_condition', matcell(_FREQ) matrow(_ROWVAL) matcol(_COLVAL)" // Two-way tabulation
+    if "`cross'" != "" local tabcmd "quietly tabulate `var' `cross' `if_condition', matcell(_FREQ) matrow(_ROWVAL) matcol(_COLVAL)" // Two-way tabulation
     else local tabcmd "quietly tabulate `var' `if_condition', matcell(_FREQ) matrow(_ROWVAL)" // One-way tabulation 
     frame `source_frame': `tabcmd'
     
     // Call mata function
-    mata: _xtab_calc()
+    mata: _xtab_core_calc()
 
     // Build variable names - match matrix structure
     local varnamelist "numlab"
     
-    if "`colby'" != "" {
+    if "`cross'" != "" {
         foreach prefix in freq col row cell {
             foreach col in `colval' {
                 local varnamelist `varnamelist' `prefix'prop`col'
@@ -102,7 +122,7 @@ program define _xtab_core
         
         generate varname = "`var'", before(numlab)
         generate varlab = "`varlab'", before(numlab)
-        capture generate `rowby' = "`stratum_label'", before(numlab)
+        capture generate `by' = "`stratum_label'", before(numlab)
         generate vallab = "", before(numlab)
     }
 
@@ -114,7 +134,7 @@ program define _xtab_core
     }
     
     // Calculate totals
-    if "`colby'" != "" {
+    if "`cross'" != "" {
         // Two-way
         local counter 1
         foreach freq of varlist freq* {
@@ -129,18 +149,18 @@ program define _xtab_core
         egen total = total(freq)
     }
     drop numlab
-    if "`binary'" != "" _binreshape, rowby(`rowby') colby(`colby')
+    if "`binary'" != "" _binreshape, by(`by') cross(`cross')
 end
 
 // * calculate row, column, and cell proportions
 mata:
-void _xtab_calc()
+void _xtab_core_calc()
 {
     _FREQ = st_matrix("_FREQ")
     _ROWVAL = st_matrix("_ROWVAL")
     
     // Check if this is one-way or two-way
-    if (st_local("colby") == "") {
+    if (st_local("cross") == "") {
         // One-way tabulation
         _PROP = _FREQ / sum(_FREQ)
         _FULLMAT = (_FREQ, _PROP)
@@ -167,14 +187,14 @@ end
 
 // * reshape binary data (formerly yesno)
 program define _binreshape
-    syntax, [rowby(name) colby(name)]
+    syntax, [by(name) cross(name)]
     
     quietly replace vallab = strlower(subinstr(vallab, " ", "_", .))
     quietly levelsof vallab, local(vallab_value)
     quietly replace vallab = "_" + strlower(vallab)
 
-    // Determine which variables to reshape based on colby
-    if "`colby'" != "" quietly ds freq* col* rowprop* rowfreq cell*, has(type numeric)
+    // Determine which variables to reshape based on cross
+    if "`cross'" != "" quietly ds freq* col* rowprop* rowfreq cell*, has(type numeric)
     else quietly ds freq prop, has(type numeric)
 
     local reshape_vars `r(varlist)'
@@ -184,22 +204,22 @@ program define _binreshape
         local `var'_label: variable label `var'
     }
 
-    if "`colby'" == "" {
-        quietly reshape wide freq prop, i(`rowby' varname varlab) j(vallab) string
+    if "`cross'" == "" {
+        quietly reshape wide freq prop, i(`by' varname varlab) j(vallab) string
     }
-    if "`colby'" != "" {
+    if "`cross'" != "" {
         quietly ds *, has(type numeric)
         foreach numvar in `r(varlist)' {
             local `numvar'_varlab: variable label `numvar'
         }
-        quietly reshape wide freq* col* rowprop* rowfreq cell*, i(`rowby' varname varlab) j(vallab) string
+        quietly reshape wide freq* col* rowprop* rowfreq cell*, i(`by' varname varlab) j(vallab) string
     }
 
 end
 
 // * attach variable labels
 program define _labelvars
-    syntax, [df(name) rowby(name) colby(name) source_frame(name) binary(name)]
+    syntax, [df(name) by(name) cross(name) source_frame(name) binary(name)]
     // standard vars/vars in one-way
     frame `df' {
         label variable varname "Variable"
@@ -210,26 +230,26 @@ program define _labelvars
         capture label variable total "Total"
     }
 
-    // rowby specified
-    if "`rowby'" != "" {
-        frame `source_frame': local rowby_varlab: variable label `rowby' 
-        frame `df': label variable `rowby' "`rowby_varlab'"
+    // by specified
+    if "`by'" != "" {
+        frame `source_frame': local by_varlab: variable label `by' 
+        frame `df': label variable `by' "`by_varlab'"
     }
-    // colby specified
-    if "`binary'" == "" & "`colby'" != "" {
-        frame `source_frame': levelsof `colby', local(colby_values)
-        foreach val in `colby_values' {
-            frame `source_frame': local colby_lbl_`val': label (`colby') `val'            
-            frame `df': label variable freq`val' "Frequency `colby_lbl_`val''"
-            frame `df': label variable total`val' "Total `colby_lbl_`val''"
-            frame `df': label variable rowprop`val' "Row proportion `colby_lbl_`val''"
-            frame `df': label variable colprop`val' "Column proportion `colby_lbl_`val''"
-            frame `df': label variable cellprop`val' "Cell proportion `colby_lbl_`val''"
+    // cross specified
+    if "`binary'" == "" & "`cross'" != "" {
+        frame `source_frame': levelsof `cross', local(cross_values)
+        foreach val in `cross_values' {
+            frame `source_frame': local cross_lbl_`val': label (`cross') `val'            
+            frame `df': label variable freq`val' "Frequency `cross_lbl_`val''"
+            frame `df': label variable total`val' "Total `cross_lbl_`val''"
+            frame `df': label variable rowprop`val' "Row proportion `cross_lbl_`val''"
+            frame `df': label variable colprop`val' "Column proportion `cross_lbl_`val''"
+            frame `df': label variable cellprop`val' "Cell proportion `cross_lbl_`val''"
         }
         frame `df': label variable rowfreq "Overall row frequency"
         frame `df': label variable total_all "Overall total count"
     }
-    else if "`binary'" != "" & "`colby'" == "" {
+    else if "`binary'" != "" & "`cross'" == "" {
         frame `df': quietly ds freq* prop*
         foreach reshapevars in `r(varlist)' {
             frame `df': local `reshapevars'_varlab: variable label `reshapevars'
@@ -240,20 +260,20 @@ program define _labelvars
             frame `df': label variable `reshapevars' "``reshapevars'_varlab'"
         }
     }
-    else if "`binary'" != "" & "`colby'" != "" {
-        // get value and variable label from colby
-        frame `source_frame': quietly levelsof `colby', local(colby_values)
+    else if "`binary'" != "" & "`cross'" != "" {
+        // get value and variable label from cross
+        frame `source_frame': quietly levelsof `cross', local(cross_values)
         frame `df': quietly ds freq* col* rowprop* rowfreq* cell*
         foreach reshapevars in `r(varlist)' {
             frame `df': local `reshapevars'_varlab: variable label `reshapevars'
             local `reshapevars'_varlab: subinstr local `reshapevars'_varlab "_" "["
             local `reshapevars'_varlab: subinstr local `reshapevars'_varlab " " "] "
             local `reshapevars'_varlab: subinstr local `reshapevars'_varlab "_" " ", all
-            foreach val in `colby_values' {
-                frame `source_frame': local colby_lbl_`val': label (`colby') `val'
-                local colby_lbl_`val' = strlower("`colby_lbl_`val''")
-                local `reshapevars'_varlab: subinstr local `reshapevars'_varlab "`val'" " `colby_lbl_`val''"
-                frame `df': label variable total`val' "Total `colby_lbl_`val''"
+            foreach val in `cross_values' {
+                frame `source_frame': local cross_lbl_`val': label (`cross') `val'
+                local cross_lbl_`val' = strlower("`cross_lbl_`val''")
+                local `reshapevars'_varlab: subinstr local `reshapevars'_varlab "`val'" " `cross_lbl_`val''"
+                frame `df': label variable total`val' "Total `cross_lbl_`val''"
             }
             local `reshapevars'_varlab: subinstr local `reshapevars'_varlab "freq" "Frequency | ", word
             local `reshapevars'_varlab: subinstr local `reshapevars'_varlab "colprop" "Column proportion | ", word
@@ -264,10 +284,11 @@ program define _labelvars
         }
         frame `df': label variable total_all "Overall total count"
     }
+    frame `df': order total*, last
 end
 
 clear frames
 sysuse nlsw88, clear
 desc married
-_xtab, var(married) binary //rowby(south) //colby(race)
+dtfreq married smsa, binary by(south) cross(race)
 frame _df: desc
