@@ -229,7 +229,7 @@ program define _binreshape
     }
 
     if "`cross'" == "" {
-        quietly reshape wide freq prop, i(`by' varname varlab) j(vallab) string
+        quietly reshape wide freq prop pct, i(`by' varname varlab) j(vallab) string
     }
     if "`cross'" != "" {
         quietly ds *, has(type numeric)
