@@ -83,7 +83,7 @@ program define _xtab
 
         // Get variable label from main data
         local `var'_varlab: variable label `var'
-        if "`varlab'" == "" local varlab "`var'"
+        if "``var'_varlab'" == "" local `var'_varlab "`var'"
         
         // If by specified, process each level separately  
         if "`by'" != "" {
@@ -97,7 +97,7 @@ program define _xtab
                 // Run analysis for this level
                 frame `temp_frame' {
                     _xtab_core, var(`var') by(`by') cross(`cross') ///
-                        varlab(`varlab') stratum_label(`by_label') ///
+                        varlab(``var'_varlab') stratum_label(`by_label') ///
                         source_frame(`source_frame') binary(`binary') by_condition("& `by' == `level'") ///
                         ifcmd(`ifcmd') wtexp(`wtexp')
                     tempfile _result
@@ -108,7 +108,7 @@ program define _xtab
             
             // Add totals (all data)
             frame `temp_frame' {
-                _xtab_core, var(`var') cross(`cross') varlab(`varlab') ///
+                _xtab_core, var(`var') cross(`cross') varlab(``var'_varlab') ///
                     stratum_label("Total") binary(`binary') source_frame(`source_frame') ///
                     ifcmd(`ifcmd') wtexp(`wtexp') by(`by')
                 tempfile _result
@@ -120,7 +120,7 @@ program define _xtab
         else {
             // No by - just run once
             frame `temp_frame' {
-                _xtab_core, var(`var') cross(`cross') varlab(`varlab') ///
+                _xtab_core, var(`var') cross(`cross') varlab(``var'_varlab') ///
                     stratum_label("Total") binary(`binary') source_frame(`source_frame') ///
                     ifcmd(`ifcmd') wtexp(`wtexp')
                 tempfile _result
@@ -628,7 +628,10 @@ clear frames
 sysuse nlsw88, clear
 desc married
 label values smsa marlbl
-dtfreq smsa married, binary
+dtfreq smsa married
 frame _df: desc
+cwf _df
+br
+exit, clear
 cd "C:\Users\hafiz\OneDrive\MyWork\personal\stata\repo\dtkit"
 do test/dtfreq_test.do
