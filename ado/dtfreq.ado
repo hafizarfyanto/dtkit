@@ -4,7 +4,6 @@ foreach prog in `proglist' {
 }
 capture mata: mata drop _xtab_core_calc()
 
-// subroutine
 program define dtfreq
     *! Version 2.0.0 Hafiz 27May2025
     * Module to produce frequency dataset
@@ -48,13 +47,13 @@ program define dtfreq
     if "`format'" == "" {
         frame `df': _formatvars `r(varlist)'
     }
-    else format `r(varlist)' `format' 
+    else frame `df': format `r(varlist)' `format' 
 
     // drop variables
-    if "`binary'" == "" frame `df': order `by' varname varlab vallab *prop* *pct* freq* rowfreq* total*, alpha
-    else frame `df': order `by' varname varlab *prop* *pct* freq* rowfreq* total*, alpha
-    frame `df': order *prop* *pct* freq* rowfreq* total*, last
-    frame `df': order `by' varname varlab
+    local core_vars "`by' varname varlab"
+    if "`binary'" == "" local core_vars "`core_vars' vallab"
+    if "`cross'" != "" frame `df': order `core_vars' *prop* *pct* freq* rowfreq* total* 
+    else frame `df': order `core_vars' *prop* *pct* freq* total* 
     if strpos("`stats'", "row") == 0 frame `df': capture drop row*
     if strpos("`stats'", "col") == 0 frame `df': capture drop col*
     if strpos("`stats'", "cell") == 0 frame `df': capture drop cell*
@@ -71,12 +70,12 @@ program define dtfreq
             local extension = ustrregexs(3)
             local fullname = "`fullpath'`filename'`extension'"
         }
-        _toexcel, fullname(`fullname') exopt(`exopt')
+        frame `df': _toexcel, fullname(`fullname') exopt(`exopt')
     }
 
 end
 
-// execute xtab
+// * Loops through variables and groups to make tables
 program define _xtab
     syntax varlist(min=1 numeric) [, df(name) by(name) cross(name) binary(name) source_frame(name) temp_frame(name) ifcmd(string) wtexp(string)]
 
@@ -123,16 +122,18 @@ program define _xtab
             frame `temp_frame' {
                 _xtab_core, var(`var') cross(`cross') varlab(`varlab') ///
                     stratum_label("Total") binary(`binary') source_frame(`source_frame') ///
-                        ifcmd(`ifcmd') wtexp(`wtexp')
+                    ifcmd(`ifcmd') wtexp(`wtexp')
+                tempfile _result
+                quietly save `_result'
             }
-            frame copy `temp_frame' `df', replace
+            frame `df': quietly append using `_result'
         }
 
     }
 
 end
 
-// * tabulate, calculate matrices, and reshape
+// * Does the actual counting and math for each table
 program define _xtab_core
     // use name instead of varname
     syntax, var(name) varlab(string) stratum_label(string) source_frame(name) ///
@@ -142,7 +143,6 @@ program define _xtab_core
     // Create tabulation with if condition
     if "`cross'" != "" local tabcmd "quietly tabulate `var' `cross' `wtexp' `ifcmd' `by_condition', matcell(_FREQ) matrow(_ROWVAL) matcol(_COLVAL)" // Two-way tabulation
     else local tabcmd "quietly tabulate `var' `wtexp' `ifcmd' `by_condition', matcell(_FREQ) matrow(_ROWVAL)" // One-way tabulation 
-
     frame `source_frame': `tabcmd'
     
     // Call mata function
@@ -192,11 +192,10 @@ program define _xtab_core
     
     // Calculate totals
     if "`cross'" != "" {
-        // Two-way
-        local counter 1
-        foreach freq of varlist freq* {
-            egen total`counter' = total(`freq')
-            local ++counter
+        // Two-way - use actual cross variable values from the column values
+        // The colval should contain the cross variable levels from mata
+        foreach val in `colval' {
+            capture egen total`val' = total(freq`val')
         }
         egen rowfreq = rowtotal(freq*), missing
         egen total_all = total(rowfreq)
@@ -205,6 +204,7 @@ program define _xtab_core
         // One-way
         egen total = total(freq)
     }
+
     drop numlab
     if "`binary'" != "" _binreshape, by(`by') cross(`cross')
 end
@@ -241,7 +241,7 @@ program define _binreshape
 
 end
 
-// * attach variable labels
+// * Adds nice names to all output columns
 program define _labelvars
     syntax, [df(name) by(name) cross(name) source_frame(name) binary(name)]
     // standard vars/vars in one-way
@@ -261,7 +261,7 @@ program define _labelvars
     }
     // cross specified
     if "`binary'" == "" & "`cross'" != "" {
-        frame `source_frame': levelsof `cross', local(cross_values)
+        frame `source_frame': quietly levelsof `cross', local(cross_values)
         foreach val in `cross_values' {
             frame `source_frame': local cross_lbl_`val': label (`cross') `val'            
             frame `df': label variable freq`val' "Frequency `cross_lbl_`val''"
@@ -314,7 +314,7 @@ program define _labelvars
     frame `df': order total*, last
 end
 
-// * export to excel
+// * Saves the final table to Excel file
 program define _toexcel
 
     syntax, [fullname(string) exopt(string)]
@@ -334,7 +334,7 @@ program define _toexcel
 
 end
 
-* Program to automatically format numeric variables based on data characteristics
+// * Makes numbers look good with commas and decimals
 capture program drop _formatvars
 program define _formatvars
     syntax varlist, [report]
@@ -441,7 +441,7 @@ program define _formatvars
     }
 end
 
-// * argument checking and validation
+// * Checks if user inputs are valid before starting
 program define _argcheck, rclass
     syntax varlist(min=1 numeric) [if] [in] [aweight fweight iweight pweight] ///
            [, df(string) by(varname numeric) cross(varname numeric) BINary ///
@@ -463,7 +463,7 @@ program define _argcheck, rclass
     if "`type'" != "" {
         local duptype: list dups type
         if "`duptype'" != "" {
-            display as error "Option stats() must be unique. Duplicates found: " as result "`duptype'" as error " in " as result "type(`type')" as error "."
+            display as error "Option type() must be unique. Duplicates found: " as result "`duptype'" as error " in " as result "type(`type')" as error "."
             exit 198
         }
         if !regexm("`type'",  "^\s*(prop|pct)([ ]+(prop|pct)){0,1}\s*$") {
@@ -563,7 +563,7 @@ program define _argcheck, rclass
         }
         // get base var value set
         gettoken basevarname: varlist
-        quietly levelsof `basevarname' if `touse' & !missing(`var'), local(var_values)
+        quietly levelsof `basevarname' if `touse' & !missing(`basevarname'), local(var_values)
         local var_display "`basevarname':"
         foreach val in `var_values' {
             local val_label : label (`basevarname') `val'
@@ -591,7 +591,7 @@ program define _argcheck, rclass
 
 end
 
-// * calculate row, column, and cell proportions
+// * Calculates percentages and proportions in Mata
 mata:
 void _xtab_core_calc()
 {
@@ -627,5 +627,8 @@ end
 clear frames
 sysuse nlsw88, clear
 desc married
-dtfreq smsa married collgrad south, by(occupation) cross(race) stats(row col)
+label values smsa marlbl
+dtfreq smsa married, binary
 frame _df: desc
+cd "C:\Users\hafiz\OneDrive\MyWork\personal\stata\repo\dtkit"
+do test/dtfreq_test.do
