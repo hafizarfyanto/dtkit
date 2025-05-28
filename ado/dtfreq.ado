@@ -11,7 +11,6 @@ program define dtfreq
     version 16
     syntax varlist(min=1 numeric) [if] [in] [aweight fweight iweight pweight] [using/] [, df(string) by(varname numeric) cross(varname numeric) BINary FOrmat(string) noMISS Exopt(string) STATs(namelist max=3) TYpe(namelist max=2)]
 
-    di "`stats'"
     // Validate arguments and get returned parameters
     _argcheck `varlist' `if' `in' [`weight'`exp'], df(`df') by(`by') cross(`cross') `binary' format(`format') `miss' using(`using') exopt(`exopt') stats("`stats'") type("`type'")
     
@@ -449,7 +448,6 @@ program define _argcheck, rclass
            FOrmat(string) noMISS using(string) exopt(string) stats(namelist) type(namelist) ///
            fullpath(string) filename(string) extension(string)]
 
-
     // * Validate stats and type options
     if "`stats'" != "" {
         local dupstats: list dups stats
@@ -499,9 +497,8 @@ program define _argcheck, rclass
     }
 
 
-    // * Binary option validation (enhanced with label consistency)
+    // * Binary option validation (domain-specific)
     if "`binary'" != "" {
-        // Single efficient check for binary variables
         tempvar touse
         if "`miss'" == "nomiss" {
             marksample touse, strok
@@ -510,91 +507,88 @@ program define _argcheck, rclass
             marksample touse, strok novarlist
         }
         
-        // Initialize issue tracking
-        local value_issues ""
-        local label_issues ""
-        local vars_with_value_issues ""
-        local vars_with_label_issues ""
+        // Step 1: Check each variable has exactly 2 values and collect all value-label pairs
+        local first_var 1
+        local standard_values ""
+        local problem_vars ""
         
-        // Check each variable for binary requirements
         foreach var of local varlist {
-            
-            // Check values - must have exactly 2 distinct non-missing values
             quietly levelsof `var' if `touse' & !missing(`var'), local(var_values)
             local n_values : word count `var_values'
+            
+            // Check if variable has exactly 2 values
             if `n_values' != 2 {
-                local value_issues "`value_issues' `var'(`n_values' values: `var_values')"
-                local vars_with_value_issues "`vars_with_value_issues' `var'"
+                local var_display "`var':"
+                foreach val in `var_values' {
+                    local val_label : label (`var') `val'
+                    if "`val_label'" == "" local val_label "`val'"
+                    local var_display `"`var_display' `val' "`val_label'""'
+                }
+                local problem_vars "`problem_vars' `var'"
+                continue
             }
             
-            // Check labels - must have exactly 2 distinct labels
-            quietly levelsof `var' if `touse' & !missing(`var'), local(var_values_for_labels)
-            local var_labels ""
-            foreach val in `var_values_for_labels' {
-                local val_label : label (`var') `val'
-                if "`val_label'" == "" local val_label "`val'"  // Use value if no label
-                local var_labels "`var_labels' `val_label'"
+            // For first valid variable, establish the standard
+            if `first_var' {
+                local standard_values "`var_values'"
+                // Store standard labels for each value
+                foreach val in `standard_values' {
+                    local standard_label_`val' : label (`var') `val'
+                    if "`standard_label_`val''" == "" local standard_label_`val' "`val'"
+                }
+                local first_var 0
             }
-            local var_labels : list uniq var_labels
-            local n_labels : word count `var_labels'
-            if `n_labels' != 2 {
-                local label_issues "`label_issues' `var'(`n_labels' labels: `var_labels')"
-                local vars_with_label_issues "`vars_with_label_issues' `var'"
+            else {
+                // Check if this variable matches the standard values
+                if "`var_values'" != "`standard_values'" {
+                    local problem_vars "`problem_vars' `var'"
+                    continue
+                }
+                
+                // Check if labels match the standard
+                local labels_match 1
+                foreach val in `var_values' {
+                    local this_label : label (`var') `val'
+                    if "`this_label'" == "" local this_label "`val'"
+                    if "`this_label'" != "`standard_label_`val''" {
+                        local labels_match 0
+                        break
+                    }
+                }
+                
+                if !`labels_match' {
+                    local problem_vars "`problem_vars' `var'"
+                }
             }
         }
-        
-        // Report value issues with informative messages
-        if "`vars_with_value_issues'" != "" {
-            display as error "binary option requires exactly 2 distinct non-missing values per variable."
-            display as error "Variables with incorrect number of values:"
-            foreach issue in `value_issues' {
-                display as error "  `issue'"
+        // get base var value set
+        gettoken basevarname: varlist
+        quietly levelsof `basevarname' if `touse' & !missing(`var'), local(var_values)
+        local var_display "`basevarname':"
+        foreach val in `var_values' {
+            local val_label : label (`basevarname') `val'
+            if "`val_label'" == "" local val_label "`val'"
+            local var_display `"`var_display' `val' "`val_label'""'
+        }
+
+        // Report any problematic variables
+        if "`problem_vars'" != "" {
+            display as error "Some variables have inconsistent values/labels compared with:" ///
+            _newline as result `"`var_display'"' as error _newline "Problematic variable(s):"
+            foreach var of local problem_vars {
+                quietly levelsof `var' if `touse' & !missing(`var'), local(var_values)
+                local var_display "`var':"
+                foreach val in `var_values' {
+                    local val_label : label (`var') `val'
+                    if "`val_label'" == "" local val_label "`val'"
+                    local var_display `"`var_display' `val' "`val_label'""'
+                }
+                display as result `"`var_display'"'
             }
             exit 198
-        }
-        
-        // Report label issues with informative messages  
-        if "`vars_with_label_issues'" != "" {
-            display as error "binary option requires exactly 2 distinct labels per variable."
-            display as error "Variables with incorrect number of labels:"
-            foreach issue in `label_issues' {
-                display as error "  `issue'"
-            }
-            exit 198
-        }
-        
-        // Check for consistent binary values across all variables (optional warning)
-        local all_values ""
-        foreach var of local varlist {
-            quietly levelsof `var' if `touse' & !missing(`var'), local(var_vals)
-            local all_values "`all_values' `var_vals'"
-        }
-        local unique_values : list sort all_values
-        local unique_values : list uniq unique_values
-        if `:word count `unique_values'' > 2 {
-            display as error "Note: Variables use different binary values across the varlist: `unique_values'"
-            display as error "      This may affect interpretation of results."
-            error 198
-        }
-        
-        // Check for consistent binary labels across all variables (optional warning)
-        local all_labels ""
-        foreach var of local varlist {
-            quietly levelsof `var' if `touse' & !missing(`var'), local(var_values_for_labels)
-            foreach val in `var_values_for_labels' {
-                local val_label : label (`var') `val'
-                if "`val_label'" == "" local val_label "`val'"
-                local all_labels "`all_labels' `val_label'"
-            }
-        }
-        local all_labels : list sort all_labels
-        local all_labels : list uniq all_labels
-        if `:word count `all_labels'' > 2 {
-            display as error "Note: Variables use different binary labels across the varlist: `all_labels'"
-            display as error "      This may affect interpretation of results."
-            error 198
         }
     }
+
 end
 
 // * calculate row, column, and cell proportions
@@ -633,5 +627,5 @@ end
 clear frames
 sysuse nlsw88, clear
 desc married
-dtfreq married, by(south) cross(race) stats(row col)
+dtfreq smsa married collgrad south, by(occupation) cross(race) stats(row col)
 frame _df: desc
