@@ -1,4 +1,4 @@
-local proglist dtfreq _argcheck _xtab _xtab_core _xtab_core _binreshape _labelvars _toexcel
+local proglist dtfreq _argcheck _xtab _xtab_core _xtab_core _binreshape _labelvars _toexcel _formatvars
 foreach prog in `proglist' {
     capture program drop `prog'
 }
@@ -9,10 +9,11 @@ program define dtfreq
     *! Version 2.0.0 Hafiz 27May2025
     * Module to produce frequency dataset
     version 16
-    syntax varlist(min=1 numeric) [if] [in] [aweight fweight iweight pweight] [using/] [, df(string) by(varname numeric) cross(varname numeric) BINary FOrmat(string) noMISS Exopt(string) STATs(string) TYpe(string)]
+    syntax varlist(min=1 numeric) [if] [in] [aweight fweight iweight pweight] [using/] [, df(string) by(varname numeric) cross(varname numeric) BINary FOrmat(string) noMISS Exopt(string) STATs(namelist max=3) TYpe(namelist max=2)]
 
+    di "`stats'"
     // Validate arguments and get returned parameters
-    _argcheck `varlist' `if' `in' [`weight'`exp'], df(`df') by(`by') cross(`cross') `binary' format(`format') `miss' using(`using') exopt(`exopt')
+    _argcheck `varlist' `if' `in' [`weight'`exp'], df(`df') by(`by') cross(`cross') `binary' format(`format') `miss' using(`using') exopt(`exopt') stats("`stats'") type("`type'")
     
     // * Set defaults
     if "`df'" == "" local df "_df"
@@ -51,7 +52,10 @@ program define dtfreq
     else format `r(varlist)' `format' 
 
     // drop variables
-    frame `df': order *prop* *pct* freq* total*, last
+    if "`binary'" == "" frame `df': order `by' varname varlab vallab *prop* *pct* freq* rowfreq* total*, alpha
+    else frame `df': order `by' varname varlab *prop* *pct* freq* rowfreq* total*, alpha
+    frame `df': order *prop* *pct* freq* rowfreq* total*, last
+    frame `df': order `by' varname varlab
     if strpos("`stats'", "row") == 0 frame `df': capture drop row*
     if strpos("`stats'", "col") == 0 frame `df': capture drop col*
     if strpos("`stats'", "cell") == 0 frame `df': capture drop cell*
@@ -442,25 +446,30 @@ end
 program define _argcheck, rclass
     syntax varlist(min=1 numeric) [if] [in] [aweight fweight iweight pweight] ///
            [, df(string) by(varname numeric) cross(varname numeric) BINary ///
-           FOrmat(string) noMISS using(string) exopt(string) stats(string) type(string) ///
+           FOrmat(string) noMISS using(string) exopt(string) stats(namelist) type(namelist) ///
            fullpath(string) filename(string) extension(string)]
 
 
     // * Validate stats and type options
-    local valid_stats "row col cell all"
-    local stats_clean = strtrim(strlower("`stats'"))
-    foreach stat in `stats_clean' {
-        if !`: list stat in valid_stats' {
-            display as error "Invalid stats option: `stat'. Valid options are: `valid_stats'"
+    if "`stats'" != "" {
+        local dupstats: list dups stats
+        if "`dupstats'" != "" {
+            display as error "Option stats() must be unique. Duplicates found: " as result "`dupstats'" as error " in " as result "stats(`stats')" as error "."
+            exit 198
+        }
+        if !regexm("`stats'", "^\s*(row|col|cell)([ ]+(row|col|cell)){0,2}\s*$") {
+            display as error "Option stats() must be up to three of row, col, or cell. Entered stats: " as result "`stats'"
             exit 198
         }
     }
-    
-    local valid_types "prop pct all"
-    local type_clean = strtrim(strlower("`type'"))
-    foreach t in `type_clean' {
-        if !`: list t in valid_types' {
-            display as error "Invalid type option: `t'. Valid options are: `valid_types'"
+    if "`type'" != "" {
+        local duptype: list dups type
+        if "`duptype'" != "" {
+            display as error "Option stats() must be unique. Duplicates found: " as result "`duptype'" as error " in " as result "type(`type')" as error "."
+            exit 198
+        }
+        if !regexm("`type'",  "^\s*(prop|pct)([ ]+(prop|pct)){0,1}\s*$") {
+            display as error "Option type() must be up to two of prop or pct. Entered type: " as result "`type'"
             exit 198
         }
     }
@@ -624,5 +633,5 @@ end
 clear frames
 sysuse nlsw88, clear
 desc married
-dtfreq married, by(south) cross(race) stats(cok) type(asu)
+dtfreq married, by(south) cross(race) stats(row col)
 frame _df: desc
