@@ -624,14 +624,14 @@ void _xtab_core_calc()
 }
 end
 
-clear frames
-sysuse nlsw88, clear
-desc married
-label values smsa marlbl
-dtfreq smsa married
-frame _df: desc
-cwf _df
-br
-exit, clear
-cd "C:\Users\hafiz\OneDrive\MyWork\personal\stata\repo\dtkit"
-do test/dtfreq_test.do
+// clear frames
+// sysuse nlsw88, clear
+// desc married
+// label values smsa marlbl
+// dtfreq smsa married
+// frame _df: desc
+// cwf _df
+// br
+// // exit, clear
+// cd "D:\OneDrive\MyWork\personal\stata\repo\dtkit"
+// do test/dtfreq_test.do
