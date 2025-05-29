@@ -44,22 +44,22 @@ program define dtfreq
     }
     else frame `df': format `r(varlist)' `format' 
 
+    // add total
+    if "`cross'" != "" & "`binary'" == "" {
+        frame `df': rename (colprop_ colpct_) (prop_all pct_all)
+        frame `df': _crosstotal
+    }
+        
     // drop variables
     local core_vars "`by' varname varlab"
     if "`binary'" == "" local core_vars "`core_vars' vallab"
-    if "`cross'" != "" {
-        frame `df': order `core_vars' *prop* *pct* freq* rowfreq* total* 
-        frame `df': rename (colprop_ colpct_) (prop_all pct_all)
-    }
+    if "`cross'" != "" frame `df': order `core_vars' *prop* *pct* freq* rowfreq* total* 
     else frame `df': order `core_vars' *prop* *pct* freq* total* 
     if strpos("`stats'", "row") == 0 frame `df': capture drop row*
     if strpos("`stats'", "col") == 0 frame `df': capture drop col*
     if strpos("`stats'", "cell") == 0 frame `df': capture drop cell*
     if strpos("`type'", "prop") == 0 frame `df': capture drop *prop*
     if strpos("`type'", "pct") == 0 frame `df': capture drop *pct*
-
-    // add total
-    if "`cross'" != "" & "`binary'" == "" frame `df': _crosstotal
 
     // sort results
     frame `df': sort `by' varname *prop*
@@ -261,7 +261,7 @@ program define _crosstotal
         capture confirm variable vallab
         if _rc {
             di as text "Note: Creating missing 'vallab' variable"
-            gen vallab = ""
+            quietly generate vallab = ""
         }
     }
 
@@ -271,46 +271,45 @@ program define _crosstotal
     local rowfreq rowfreq         // Row frequency variable
 
     // Preserve original totals and labels
-    preserve
-        keep varname varlab `vallabname' `totalvars'
-        duplicates drop varname, force
-        tempfile totals
-        save `totals'
-    restore
+    quietly {
+        preserve
+            keep varname varlab `vallabname' `totalvars'
+            duplicates drop varname, force
+            tempfile totals
+            save `totals'
+        restore
 
-    // Create total rows
-    preserve
-        collapse (sum) `freqvars' `rowfreq' , by(varname varlab)
-        merge 1:1 varname using `totals', nogen
+        // Create total rows
+        preserve
+            collapse (sum) `freqvars' `rowfreq' , by(varname varlab)
+            merge 1:1 varname using `totals', nogen
 
-        // Set category label to "Total"
-        replace `vallabname' = "Total"
+            // Set category label to "Total"
+            replace `vallabname' = "Total"
 
-        // Calculate proportions
-        foreach tvar of local totalvars {
-            if "`tvar'" != "total_all" {
-                local suffix = substr("`tvar'", 6, .)
-                gen cellprop`suffix' = `tvar' / total_all
-                gen rowprop`suffix' = cellprop`suffix'  // Same as cellprop in totals
-                gen colprop`suffix' = 1
-                replace freq`suffix' = `tvar'   // Set freq to column total
+            // Calculate proportions
+            foreach tvar of local totalvars {
+                if "`tvar'" != "total_all" {
+                    local suffix = substr("`tvar'", 6, .)
+                    generate cellprop`suffix' = `tvar' / total_all
+                    generate rowprop`suffix' = cellprop`suffix'  // Same as cellprop in totals
+                    generate colprop`suffix' = 1
+                    replace freq`suffix' = `tvar'   // Set freq to column total
+                }
             }
-        }
-        replace `rowfreq' = total_all  // Set row frequency to overall total
-        tempfile totalrows
-        save `totalrows'
-    restore
+            replace `rowfreq' = total_all  // Set row frequency to overall total
+            tempfile totalrows
+            save `totalrows'
+        restore
 
-    // Append and sort
-    append using `totalrows'
-    gen sortorder = 0
-    quietly replace sortorder = 1 if `vallabname' == "Total"
-    sort varname sortorder
-    drop sortorder
-    quietly replace varlab = "Grand total" if `vallabname' == "Total"
-
-    // Label new row
-    di as result "Added 'Total' rows for each varname"
+        // Append and sort
+        append using `totalrows'
+        generate sortorder = 0
+        quietly replace sortorder = 1 if `vallabname' == "Total"
+        sort varname sortorder
+        drop sortorder
+        quietly replace varlab = "Grand total" if `vallabname' == "Total"
+    }
 end
 // * Adds nice names to all output columns
 capture program drop _labelvars
@@ -594,93 +593,33 @@ program define _argcheck, rclass
 
     // * Binary option validation (domain-specific)
     if "`binary'" != "" {
-        tempvar touse
-        if "`miss'" == "nomiss" {
-            marksample touse, strok
-        }
-        else {
-            marksample touse, strok novarlist
-        }
-        
-        // Step 1: Check each variable has exactly 2 values and collect all value-label pairs
-        local first_var 1
-        local standard_values ""
-        local problem_vars ""
-        
-        foreach var of local varlist {
-            quietly levelsof `var' if `touse' & !missing(`var'), local(var_values)
-            local n_values : word count `var_values'
-            
-            // Check if variable has exactly 2 values
-            if `n_values' != 2 {
-                local var_display "`var':"
-                foreach val in `var_values' {
-                    local val_label : label (`var') `val'
-                    if "`val_label'" == "" local val_label "`val'"
-                    local var_display `"`var_display' `val' "`val_label'""'
-                }
-                local problem_vars "`problem_vars' `var'"
-                continue
+        tempname _chklbl
+        frame put `varlist', into(`_chklbl')
+        frame `_chklbl' {
+            quietly uselabel, clear var
+            quietly generate variable = ""
+            foreach lbl in `r(__labnames__)' {
+                quietly replace variable = "`r(`lbl')'" if lname == "`lbl'"
             }
-            
-            // For first valid variable, establish the standard
-            if `first_var' {
-                local standard_values "`var_values'"
-                // Store standard labels for each value
-                foreach val in `standard_values' {
-                    local standard_label_`val' : label (`var') `val'
-                    if "`standard_label_`val''" == "" local standard_label_`val' "`val'"
-                }
-                local first_var 0
+            quietly sort lname value
+            quietly by lname: generate index = _n
+            quietly egen indexmax = max(index), by(lname)
+            quietly levelsof index, local(levels)
+            if `r(r)' != 2 {
+                display as error "Binary option only allow exactly two values per variable. The following label has more or less than 2."
+                list variable value label if indexmax != 2, sepby(lname)
+                exit 198
             }
-            else {
-                // Check if this variable matches the standard values
-                if "`var_values'" != "`standard_values'" {
-                    local problem_vars "`problem_vars' `var'"
-                    continue
-                }
                 
-                // Check if labels match the standard
-                local labels_match 1
-                foreach val in `var_values' {
-                    local this_label : label (`var') `val'
-                    if "`this_label'" == "" local this_label "`val'"
-                    if "`this_label'" != "`standard_label_`val''" {
-                        local labels_match 0
-                        break
-                    }
-                }
-                
-                if !`labels_match' {
-                    local problem_vars "`problem_vars' `var'"
-                }
+            quietly reshape wide value label trunc, i(lname variable) j(index)
+            egen grup = group(value* label*), missing
+            sort grup, stable
+            quietly levelsof grup, local(grupvals)
+            if `r(r)' > 1 {
+                display as error "The following variables have inconsistent values/labels:"
+                list variable lname value* label*, sepby(grup) noobs subvarname
+                exit 198
             }
-        }
-        // get base var value set
-        gettoken basevarname: varlist
-        quietly levelsof `basevarname' if `touse' & !missing(`basevarname'), local(var_values)
-        local var_display "`basevarname':"
-        foreach val in `var_values' {
-            local val_label : label (`basevarname') `val'
-            if "`val_label'" == "" local val_label "`val'"
-            local var_display `"`var_display' `val' "`val_label'""'
-        }
-
-        // Report any problematic variables
-        if "`problem_vars'" != "" {
-            display as error "Some variables have inconsistent values/labels compared with:" ///
-            _newline as result `"`var_display'"' as error _newline "Problematic variable(s):"
-            foreach var of local problem_vars {
-                quietly levelsof `var' if `touse' & !missing(`var'), local(var_values)
-                local var_display "`var':"
-                foreach val in `var_values' {
-                    local val_label : label (`var') `val'
-                    if "`val_label'" == "" local val_label "`val'"
-                    local var_display `"`var_display' `val' "`val_label'""'
-                }
-                display as result `"`var_display'"'
-            }
-            exit 198
         }
     }
 
@@ -720,18 +659,18 @@ void _xtab_core_calc()
 }
 end
 
-clear frames
-sysuse nlsw88, clear
-desc married
-label values smsa marlbl
-set trace on
-set tracedepth 2
-label values sms marlbl
-dtfreq smsa married,  cross(south) stats(row col cell) type(prop pct) binary
-set trace off
-frame _df: desc
-cwf _df
-br
+// clear frames
+// sysuse nlsw88, clear
+// desc married
+// label values smsa marlbl
+// set trace on
+// set tracedepth 2
+// label values sms marlbl
+// dtfreq smsa married,  cross(south) stats(row col cell) type(prop pct) binary
+// set trace off
+// frame _df: desc
+// cwf _df
+// br
 // exit, clear
 // cd "D:\OneDrive\MyWork\personal\stata\repo\dtkit"
 // do test/dtfreq_test.do
