@@ -1,4 +1,4 @@
-v 2.0.0
+v 2.1.0
 d dtkit: Data Toolkit for Stata
 d
 d Author: Hafiz Arfyanto
@@ -12,9 +12,9 @@ f ado/dtfreq.ado
 f ado/dtfreq.sthlp
 f ado/dtmeta.ado
 f ado/dtmeta.sthlp
-f ado/dtsum.ado
-f ado/dtsum.sthlp
+f ado/dtstat.ado
+f ado/dtstat.sthlp
 f ado/dtkit.sthlp
 f examples/dtfreq_examples.do
 f examples/dtmeta_examples.do
-f examples/dtsum_examples.do
+f examples/dtstat_examples.do

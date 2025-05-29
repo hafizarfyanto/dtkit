@@ -1,6 +1,6 @@
 capture program drop dtfreq
 program define dtfreq
-    *! Version 2.0.0 Hafiz 29May2025
+    *! Version 2.1.0 Hafiz 29May2025
     * Module to produce frequency dataset
     version 16
     syntax varlist(min=1 numeric) [if] [in] [aweight fweight iweight pweight] [using/] [, df(string) by(varname numeric) cross(varname numeric) BINary FOrmat(string) noMISS Exopt(string) STATs(namelist max=3) TYpe(namelist max=2)]

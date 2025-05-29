@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 2.0.0 29May2025}{...}
+{* *! version 2.1.0 29May2025}{...}
 {viewerjumpto "Syntax" "dtkit##syntax"}{...}
 {viewerjumpto "Description" "dtkit##description"}{...}
 {viewerjumpto "Commands" "dtkit##commands"}{...}
@@ -19,7 +19,7 @@
 and summary statistics capabilities. The package includes the following commands:
 
 {p 8 17 2}
-{manhelp dtsum R:dtsum} - Enhanced summary statistics with additional measures{p_end}
+{manhelp dtstat R:dtstat} - Enhanced summary statistics with additional measures{p_end}
 
 {p 8 17 2}
 {manhelp dtfreq R:dtfreq} - Comprehensive frequency tables and distributions{p_end}
@@ -47,7 +47,7 @@ providing additional insights into your data.
 {dlgtab:Summary Statistics}
 
 {phang}
-{cmd:dtsum} [{varlist}] [{it:{help if}}] [{it:{help in}}] [{it:{help weight}}] [, {it:options}]
+{cmd:dtstat} [{varlist}] [{it:{help if}}] [{it:{help in}}] [{it:{help weight}}] [, {it:options}]
 
 {pmore}
 Provides enhanced summary statistics including additional measures beyond Stata's standard 
@@ -80,9 +80,9 @@ understanding dataset structure and quality assessment.
 {pstd}Load example dataset{p_end}
 {p 8 4 2}{stata sysuse auto, clear}{p_end}
 
-{pstd}{cmd:dtsum} - Enhanced summary statistics{p_end}
-{p 8 4 2}{stata dtsum price mpg weight}{p_end}
-{p 8 4 2}{stata dtsum if foreign == 1}{p_end}
+{pstd}{cmd:dtstat} - Enhanced summary statistics{p_end}
+{p 8 4 2}{stata dtstat price mpg weight}{p_end}
+{p 8 4 2}{stata dtstat if foreign == 1}{p_end}
 
 {pstd}{cmd:dtfreq} - Frequency analysis{p_end}
 {p 8 4 2}{stata dtfreq foreign make}{p_end}
@@ -94,7 +94,7 @@ understanding dataset structure and quality assessment.
 {pstd}Combined workflow example{p_end}
 {p 8 4 2}{stata sysuse nlsw88, clear}{p_end}
 {p 8 4 2}{stata dtmeta, merge replace}{p_end}
-{p 8 4 2}{stata dtsum age grade, df(sum1) by(married) stats(count mean sd)}{p_end}
+{p 8 4 2}{stata dtstat age grade, df(sum1) by(married) stats(count mean sd)}{p_end}
 {p 8 4 2}{stata dtfreq race, df(freq1) rowby(collgrad) colby(married)}{p_end}
 
 {marker remarks}{...}
@@ -109,7 +109,7 @@ weights, and variable lists.
 For detailed information about each command's syntax and options, see the individual 
 help files:
 
-{p 8 12 2}• {help dtsum} for enhanced summary statistics{p_end}
+{p 8 12 2}• {help dtstat} for enhanced summary statistics{p_end}
 {p 8 12 2}• {help dtfreq} for frequency analysis{p_end}
 {p 8 12 2}• {help dtmeta} for dataset metadata{p_end}
 

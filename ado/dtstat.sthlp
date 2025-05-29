@@ -1,26 +1,26 @@
 {smcl}
-{* *! version 2.0.0  25may2025}{...}
+{* *! version 2.1.0  29may2025}{...}
 {vieweralsosee "[R] summarize" "help summarize"}{...}
 {vieweralsosee "[R] collapse" "help collapse"}{...}
 {vieweralsosee "[R] tabstat" "help tabstat"}{...}
 {vieweralsosee "[D] frame" "help frame"}{...}
-{viewerjumpto "Syntax" "dtsum##syntax"}{...}
-{viewerjumpto "Description" "dtsum##description"}{...}
-{viewerjumpto "Options" "dtsum##options"}{...}
-{viewerjumpto "Examples" "dtsum##examples"}{...}
-{viewerjumpto "Stored results" "dtsum##results"}{...}
-{viewerjumpto "Author" "dtsum##author"}{...}
+{viewerjumpto "Syntax" "dtstat##syntax"}{...}
+{viewerjumpto "Description" "dtstat##description"}{...}
+{viewerjumpto "Options" "dtstat##options"}{...}
+{viewerjumpto "Examples" "dtstat##examples"}{...}
+{viewerjumpto "Stored results" "dtstat##results"}{...}
+{viewerjumpto "Author" "dtstat##author"}{...}
 {title:Title}
 
 {phang}
-{bf:dtsum} {hline 2} Produce descriptive statistics dataset
+{bf:dtstat} {hline 2} Produce descriptive statistics dataset
 
 
 {marker syntax}{...}
 {title:Syntax}
 
 {p 8 17 2}
-{cmdab:dtsum}
+{cmdab:dtstat}
 {varlist}
 {ifin}
 {weight}
@@ -50,13 +50,13 @@ see {help weight}.
 {title:Description}
 
 {pstd}
-{cmd:dtsum} creates a dataset containing descriptive statistics for the specified numeric variables.
+{cmd:dtstat} creates a dataset containing descriptive statistics for the specified numeric variables.
 The results are stored in a Stata frame, which can optionally be exported to Excel.
-Unlike {cmd:summarize} or {cmd:tabstat}, {cmd:dtsum} produces a dataset that can be further
+Unlike {cmd:summarize} or {cmd:tabstat}, {cmd:dtstat} produces a dataset that can be further
 manipulated, merged, or exported for reporting purposes.
 
 {pstd}
-When used with the {opt by()} option, {cmd:dtsum} creates statistics for each group as well as
+When used with the {opt by()} option, {cmd:dtstat} creates statistics for each group as well as
 overall totals. The program automatically handles value labels and creates appropriate labels
 for the total rows.
 
@@ -119,7 +119,7 @@ Install with: {stata ssc install gtools}, followed by {stata gtools, upgrade}.
 {opt exopt(export_options)} specifies additional options to pass to the {help export_excel##export_excel_options:Excel export} command. 
 These options are passed directly to the {help export_excel:export excel} 
 command. This option can only be used with the {cmd:using} clause. If not specified,
-the default export options are {cmd:sheet("dtsum_output", replace) firstrow(varlabels)}.
+the default export options are {cmd:sheet("dtstat_output", replace) firstrow(varlabels)}.
 
 {marker examples}{...}
 {title:Examples}
@@ -131,39 +131,39 @@ the default export options are {cmd:sheet("dtsum_output", replace) firstrow(varl
 
 {pstd}1. One-way descriptive statistics for {cmd:age} and {cmd:grade}, results in frame {cmd:_df}:{p_end}
 
-        {cmd:. frame nlsw88: dtsum age grade}
+        {cmd:. frame nlsw88: dtstat age grade}
         {cmd:. frame _df: list, clean noobs}
 
 {pstd}2. Descriptive statistics (default) for {cmd:age} and {cmd:grade} stratified by {cmd:married}, results in frame {cmd:df2}:{p_end}
 
-        {cmd:. frame nlsw88: dtsum age grade, df(df2) by(married)}
+        {cmd:. frame nlsw88: dtstat age grade, df(df2) by(married)}
         {cmd:. frame df2: list, noobs sepby(married)}
 
 {pstd}3. Descriptive statistics (count, mean, and standard deviation) for {cmd:age} and {cmd:grade} stratified by {cmd:married}, results in frame {cmd:df3}:{p_end}
 
-        {cmd:. frame nlsw88: dtsum age grade, df(df3) by(married) stats(count mean sd)}
+        {cmd:. frame nlsw88: dtstat age grade, df(df3) by(married) stats(count mean sd)}
         {cmd:. frame df3: list, noobs sepby(married)}
 
 {pstd}4. Descriptive statistics (count, mean, and standard deviation) for {cmd:age} and {cmd:grade} stratified by {cmd:married} with {opt format} option (i.e. non-integer values are displayed with two decimal digit and both integer), results in frame {cmd:df4}:{p_end}
 
-        {cmd:. frame nlsw88: dtsum age grade, df(df4) by(married) stats(count mean sd) format(}{bf:%}{cmd:8.2f)}
+        {cmd:. frame nlsw88: dtstat age grade, df(df4) by(married) stats(count mean sd) format(}{bf:%}{cmd:8.2f)}
         {cmd:. frame df4: list, noobs sepby(married)}
 
 {pstd}5. One-way descriptive statistics for {cmd:age} and {cmd:grade}, results in frame {cmd:_df}, export to excel:{p_end}
 
-        {cmd:. frame nlsw88: dtsum age grade using "examples/_df"}
+        {cmd:. frame nlsw88: dtstat age grade using "examples/_df"}
         {cmd:. frame _df: list, clean noobs}
 
 {pstd}6. Descriptive statistics (default) for {cmd:age} and {cmd:grade} stratified by {cmd:married}, results in frame {cmd:df2}, export to excel:{p_end}
 
-        {cmd:. frame nlsw88: dtsum age grade using "examples/df2", df(df2) by(married) exopt(sheet("sum", modify))}
+        {cmd:. frame nlsw88: dtstat age grade using "examples/df2", df(df2) by(married) exopt(sheet("sum", modify))}
         {cmd:. frame df2: list, noobs sepby(married)}
 
 {marker results}{...}
 {title:Stored results}
 
 {pstd}
-{cmd:dtsum} stores the following in the specified frame (default {cmd:_df}):
+{cmd:dtstat} stores the following in the specified frame (default {cmd:_df}):
 
 {synoptset 15 tabbed}{...}
 {p2col 5 15 19 2: Variables}{p_end}
@@ -185,12 +185,12 @@ additional rows with value -1 in the grouping variables represent overall totals
 {pstd}Email: {browse "mailto:hafizarfyanto@gmail.com":hafizarfyanto@gmail.com}{p_end}
 
 {pstd}
-Program Version: {bf:1.0.0} (25 May 2025)
+Program Version: {bf:2.1.0} (29 May 2025)
 
 {title:Dependencies}
 
 {pstd}
-{cmd:dtsum} works with standard Stata commands. For enhanced performance with large datasets,
+{cmd:dtstat} works with standard Stata commands. For enhanced performance with large datasets,
 the optional {opt fast} option requires:
 
 {phang2}{cmd:gtools} - Install with: {stata ssc install gtools} and then followed by {stata gtools, upgrade}{p_end}
