@@ -35,10 +35,10 @@ program define dtfreq
     _xtab `varlist', ifcmd(`ifcmd') wtexp(`wtexp') df(`df') by(`by') cross(`cross') binary(`binary') source_frame(`source_frame') temp_frame(`temp_frame')
 
     // give labels
-    _labelvars, df(`df') by(`by') cross(`cross') source_frame(`source_frame') binary(`binary')
+    _labelvars, df(`df') by(`by') cross(`cross') source_frame(`source_frame') binary(`binary') ifcmd(`ifcmd')
 
     // format vars
-    frame `df': quietly ds *, has(type numeric)
+    frame `df': quietly ds *
     if "`format'" == "" {
         frame `df': _formatvars `r(varlist)'
     }
@@ -47,13 +47,22 @@ program define dtfreq
     // drop variables
     local core_vars "`by' varname varlab"
     if "`binary'" == "" local core_vars "`core_vars' vallab"
-    if "`cross'" != "" frame `df': order `core_vars' *prop* *pct* freq* rowfreq* total* 
+    if "`cross'" != "" {
+        frame `df': order `core_vars' *prop* *pct* freq* rowfreq* total* 
+        frame `df': rename (colprop_ colpct_) (prop_all pct_all)
+    }
     else frame `df': order `core_vars' *prop* *pct* freq* total* 
     if strpos("`stats'", "row") == 0 frame `df': capture drop row*
     if strpos("`stats'", "col") == 0 frame `df': capture drop col*
     if strpos("`stats'", "cell") == 0 frame `df': capture drop cell*
     if strpos("`type'", "prop") == 0 frame `df': capture drop *prop*
     if strpos("`type'", "pct") == 0 frame `df': capture drop *pct*
+
+    // add total
+    if "`cross'" != "" frame `df': _crosstotal
+
+    // sort results
+    frame `df': sort `by' varname *prop*
 
 
     // export to excel
@@ -77,7 +86,7 @@ program define _xtab
 
     foreach var of local varlist {
 
-        // Get variable label from main data
+        // Get variable and value label from main data
         local `var'_varlab: variable label `var'
         if "``var'_varlab'" == "" local `var'_varlab "`var'"
         
@@ -93,7 +102,7 @@ program define _xtab
                 // Run analysis for this level
                 frame `temp_frame' {
                     _xtab_core, var(`var') by(`by') cross(`cross') ///
-                        varlab(``var'_varlab') stratum_label(`by_label') ///
+                        varlab(``var'_varlab') level(`level') ///
                         source_frame(`source_frame') binary(`binary') by_condition("& `by' == `level'") ///
                         ifcmd(`ifcmd') wtexp(`wtexp')
                     tempfile _result
@@ -105,7 +114,7 @@ program define _xtab
             // Add totals (all data)
             frame `temp_frame' {
                 _xtab_core, var(`var') cross(`cross') varlab(``var'_varlab') ///
-                    stratum_label("Total") binary(`binary') source_frame(`source_frame') ///
+                    level(-1) binary(`binary') source_frame(`source_frame') ///
                     ifcmd(`ifcmd') wtexp(`wtexp') by(`by')
                 tempfile _result
                 quietly save `_result'
@@ -117,7 +126,7 @@ program define _xtab
             // No by - just run once
             frame `temp_frame' {
                 _xtab_core, var(`var') cross(`cross') varlab(``var'_varlab') ///
-                    stratum_label("Total") binary(`binary') source_frame(`source_frame') ///
+                    level(-1) binary(`binary') source_frame(`source_frame') ///
                     ifcmd(`ifcmd') wtexp(`wtexp')
                 tempfile _result
                 quietly save `_result'
@@ -133,7 +142,7 @@ end
 capture program drop _xtab_core
 program define _xtab_core
     // use name instead of varname
-    syntax, var(name) varlab(string) stratum_label(string) source_frame(name) ///
+    syntax, var(name) varlab(string) level(real) source_frame(name) ///
         [by(name) cross(name) binary(name) by_condition(string) ifcmd(string) wtexp(string)]
 
     frame `source_frame': quietly levelsof `var' `ifcmd' `by_condition', local(vallabels)
@@ -169,7 +178,7 @@ program define _xtab_core
         
         generate varname = "`var'", before(numlab)
         generate varlab = "`varlab'", before(numlab)
-        capture generate `by' = "`stratum_label'", before(numlab)
+        capture generate `by' = `level', before(numlab)
         generate vallab = "", before(numlab)
     }
 
@@ -196,6 +205,8 @@ program define _xtab_core
         }
         egen rowfreq = rowtotal(freq*), missing
         egen total_all = total(rowfreq)
+        generate colprop_ = rowfreq / total_all
+        generate colpct_ = colprop_ * 100
     }
     else {
         // One-way
@@ -239,10 +250,72 @@ program define _binreshape
 
 end
 
+// * adds total row for cross option
+capture program drop _crosstotal
+program define _crosstotal
+    syntax, [vallabname(name)] // Optional vallab variable name
+
+    // Handle optional vallab (default to 'vallab' if not specified)
+    if "`vallabname'" == "" {
+        local vallabname "vallab"
+        capture confirm variable vallab
+        if _rc {
+            di as text "Note: Creating missing 'vallab' variable"
+            gen vallab = ""
+        }
+    }
+
+    // Identify key variables
+    unab freqvars: freq*          // Frequency variables (freq1, freq2, ...)
+    unab totalvars: total*        // Total variables (total1, ..., total_all)
+    local rowfreq rowfreq         // Row frequency variable
+
+    // Preserve original totals and labels
+    preserve
+        keep varname varlab `vallabname' `totalvars'
+        duplicates drop varname, force
+        tempfile totals
+        save `totals'
+    restore
+
+    // Create total rows
+    preserve
+        collapse (sum) `freqvars' `rowfreq' , by(varname varlab)
+        merge 1:1 varname using `totals', nogen
+
+        // Set category label to "Total"
+        replace `vallabname' = "Total"
+
+        // Calculate proportions
+        foreach tvar of local totalvars {
+            if "`tvar'" != "total_all" {
+                local suffix = substr("`tvar'", 6, .)
+                gen cellprop`suffix' = `tvar' / total_all
+                gen rowprop`suffix' = cellprop`suffix'  // Same as cellprop in totals
+                gen colprop`suffix' = 1
+                replace freq`suffix' = `tvar'   // Set freq to column total
+            }
+        }
+        replace `rowfreq' = total_all  // Set row frequency to overall total
+        tempfile totalrows
+        save `totalrows'
+    restore
+
+    // Append and sort
+    append using `totalrows'
+    gen sortorder = 0
+    quietly replace sortorder = 1 if `vallabname' == "Total"
+    sort varname sortorder
+    drop sortorder
+    quietly replace varlab = "Grand total" if `vallabname' == "Total"
+
+    // Label new row
+    di as result "Added 'Total' rows for each varname"
+end
 // * Adds nice names to all output columns
 capture program drop _labelvars
 program define _labelvars
-    syntax, [df(name) by(name) cross(name) source_frame(name) binary(name)]
+    syntax, [df(name) by(name) cross(name) source_frame(name) binary(name) ifcmd(string)]
     // standard vars/vars in one-way
     frame `df' {
         label variable varname "Variable"
@@ -256,7 +329,18 @@ program define _labelvars
     // by specified
     if "`by'" != "" {
         frame `source_frame': local by_varlab: variable label `by' 
-        frame `df': label variable `by' "`by_varlab'"
+        frame `source_frame': local byvallab: value label `by'
+        frame `df' {
+            label variable `by' "`by_varlab'"
+            frame `source_frame': quietly levelsof `by' `ifcmd', local(by_levels)
+            local labupper = strupper("`by'")
+            foreach level in `by_levels' {
+                frame `source_frame': local vallabtext: label (`by') `level'
+                label define `labupper' `level' "`vallabtext'", modify
+            }
+            label define `labupper' -1 "Total", modify
+            label values `by' `labupper'
+        } 
     }
     // cross specified
     if "`binary'" == "" & "`cross'" != "" {
@@ -268,6 +352,11 @@ program define _labelvars
             frame `df': label variable rowprop`val' "Row proportion `cross_lbl_`val''"
             frame `df': label variable colprop`val' "Column proportion `cross_lbl_`val''"
             frame `df': label variable cellprop`val' "Cell proportion `cross_lbl_`val''"
+            frame `df': label variable rowpct`val' "Row percentage (%) `cross_lbl_`val''"
+            frame `df': label variable colpct`val' "Column percentage (%) `cross_lbl_`val''"
+            frame `df': label variable cellpct`val' "Cell percentage (%) `cross_lbl_`val''"
+            frame `df': label variable colprop_ "Overall column proportion"
+            frame `df': label variable colpct_ "Overall column percentage (%)"
         }
         frame `df': label variable rowfreq "Overall row frequency"
         frame `df': label variable total_all "Overall total count"
@@ -341,7 +430,12 @@ program define _formatvars
     foreach var of local varlist {
         // skip string vars
         local vartype: type `var'
-        if substr("`vartype'",1,3) == "str" continue
+        if substr("`vartype'",1,3) == "str" {
+            local varformat: format `var'
+            local varformat: subinstr local varformat "%" "%-"
+            format `var' `varformat'
+            continue
+        }
 
         * Check if variable has date-time format and skip if so
         local current_fmt : format `var'
@@ -626,14 +720,18 @@ void _xtab_core_calc()
 }
 end
 
-// clear frames
-// sysuse nlsw88, clear
-// desc married
-// label values smsa marlbl
-// dtfreq smsa married
-// frame _df: desc
-// cwf _df
-// br
-// // exit, clear
+clear frames
+sysuse nlsw88, clear
+desc married
+label values smsa marlbl
+set trace on
+set tracedepth 3
+label values sms marlbl
+dtfreq smsa married,  cross(south) stats(row col cell) type(prop pct) binary
+set trace off
+frame _df: desc
+cwf _df
+br
+// exit, clear
 // cd "D:\OneDrive\MyWork\personal\stata\repo\dtkit"
 // do test/dtfreq_test.do
