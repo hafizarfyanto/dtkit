@@ -1,6 +1,6 @@
 capture program drop dtfreq
 program define dtfreq
-    *! Version 2.0.0 Hafiz 27May2025
+    *! Version 2.0.0 Hafiz 29May2025
     * Module to produce frequency dataset
     version 16
     syntax varlist(min=1 numeric) [if] [in] [aweight fweight iweight pweight] [using/] [, df(string) by(varname numeric) cross(varname numeric) BINary FOrmat(string) noMISS Exopt(string) STATs(namelist max=3) TYpe(namelist max=2)]
@@ -597,27 +597,28 @@ program define _argcheck, rclass
         frame put `varlist', into(`_chklbl')
         frame `_chklbl' {
             quietly uselabel, clear var
-            quietly generate variable = ""
+            ren lname labelname
+            quietly generate varname = ""
             foreach lbl in `r(__labnames__)' {
-                quietly replace variable = "`r(`lbl')'" if lname == "`lbl'"
+                quietly replace varname = "`r(`lbl')'" if lname == "`lbl'"
             }
-            quietly sort lname value
-            quietly by lname: generate index = _n
-            quietly egen indexmax = max(index), by(lname)
+            quietly sort labelname value
+            quietly by labelname: generate index = _n
+            quietly egen indexmax = max(index), by(labelname)
             quietly levelsof index, local(levels)
             if `r(r)' != 2 {
                 display as error "Binary option only allow exactly two values per variable. The following label has more or less than 2."
-                list variable value label if indexmax != 2, sepby(lname)
+                list varname value label if indexmax != 2, sepby(labelname)
                 exit 198
             }
                 
-            quietly reshape wide value label trunc, i(lname variable) j(index)
+            quietly reshape wide value label trunc, i(labelname varname) j(index)
             egen grup = group(value* label*), missing
             sort grup, stable
             quietly levelsof grup, local(grupvals)
             if `r(r)' > 1 {
                 display as error "The following variables have inconsistent values/labels:"
-                list variable lname value* label*, sepby(grup) noobs subvarname
+                list varname labelname value* label*, sepby(grup) noobs subvarname
                 exit 198
             }
         }
@@ -658,19 +659,3 @@ void _xtab_core_calc()
     }
 }
 end
-
-// clear frames
-// sysuse nlsw88, clear
-// desc married
-// label values smsa marlbl
-// set trace on
-// set tracedepth 2
-// label values sms marlbl
-// dtfreq smsa married,  cross(south) stats(row col cell) type(prop pct) binary
-// set trace off
-// frame _df: desc
-// cwf _df
-// br
-// exit, clear
-// cd "D:\OneDrive\MyWork\personal\stata\repo\dtkit"
-// do test/dtfreq_test.do
