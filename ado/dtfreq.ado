@@ -59,7 +59,7 @@ program define dtfreq
     if strpos("`type'", "pct") == 0 frame `df': capture drop *pct*
 
     // add total
-    if "`cross'" != "" frame `df': _crosstotal
+    if "`cross'" != "" & "`binary'" == "" frame `df': _crosstotal
 
     // sort results
     frame `df': sort `by' varname *prop*
@@ -725,7 +725,7 @@ sysuse nlsw88, clear
 desc married
 label values smsa marlbl
 set trace on
-set tracedepth 3
+set tracedepth 2
 label values sms marlbl
 dtfreq smsa married,  cross(south) stats(row col cell) type(prop pct) binary
 set trace off
