@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 2.0.0  25may2025}{...}
+{* *! version 2.1.0  29may2025}{...}
 {vieweralsosee "[R] describe" "help describe"}{...}
 {vieweralsosee "[R] notes" "help notes"}{...}
 {vieweralsosee "[R] label" "help label"}{...}

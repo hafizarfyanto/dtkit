@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 2.0.0 29May2025}{...}
+{* *! version 2.1.0 29May2025}{...}
 {vieweralsosee "[R] contract" "help contract"}{...}
 {vieweralsosee "[R] table" "help table"}{...}
 {vieweralsosee "[R] tabstat" "help tabstat"}{...}
