@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 1.0.0  25may2025}{...}
+{* *! version 2.0.0  25may2025}{...}
 {vieweralsosee "[R] summarize" "help summarize"}{...}
 {vieweralsosee "[R] collapse" "help collapse"}{...}
 {vieweralsosee "[R] tabstat" "help tabstat"}{...}

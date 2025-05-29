@@ -1,6 +1,6 @@
 capture program drop dtmeta
 program define dtmeta
-    *! Version 1.0.0 Hafiz 25May2025
+    *! Version 2.0.0 Hafiz 29May2025
     * Module to produce three metadata datasets in separate frames
     
     version 16
