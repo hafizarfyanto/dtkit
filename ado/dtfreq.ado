@@ -1,9 +1,4 @@
-local proglist dtfreq _argcheck _xtab _xtab_core _xtab_core _binreshape _labelvars _toexcel _formatvars
-foreach prog in `proglist' {
-    capture program drop `prog'
-}
-capture mata: mata drop _xtab_core_calc()
-
+capture program drop dtfreq
 program define dtfreq
     *! Version 2.0.0 Hafiz 27May2025
     * Module to produce frequency dataset
@@ -76,6 +71,7 @@ program define dtfreq
 end
 
 // * Loops through variables and groups to make tables
+capture program drop _xtab
 program define _xtab
     syntax varlist(min=1 numeric) [, df(name) by(name) cross(name) binary(name) source_frame(name) temp_frame(name) ifcmd(string) wtexp(string)]
 
@@ -134,6 +130,7 @@ program define _xtab
 end
 
 // * Does the actual counting and math for each table
+capture program drop _xtab_core
 program define _xtab_core
     // use name instead of varname
     syntax, var(name) varlab(string) stratum_label(string) source_frame(name) ///
@@ -210,6 +207,7 @@ program define _xtab_core
 end
 
 // * reshape binary data (formerly yesno)
+capture program drop _binreshape
 program define _binreshape
     syntax, [by(name) cross(name)]
     
@@ -242,6 +240,7 @@ program define _binreshape
 end
 
 // * Adds nice names to all output columns
+capture program drop _labelvars
 program define _labelvars
     syntax, [df(name) by(name) cross(name) source_frame(name) binary(name)]
     // standard vars/vars in one-way
@@ -315,6 +314,7 @@ program define _labelvars
 end
 
 // * Saves the final table to Excel file
+capture program drop _toexcel
 program define _toexcel
 
     syntax, [fullname(string) exopt(string)]
@@ -442,6 +442,7 @@ program define _formatvars
 end
 
 // * Checks if user inputs are valid before starting
+capture program drop _argcheck
 program define _argcheck, rclass
     syntax varlist(min=1 numeric) [if] [in] [aweight fweight iweight pweight] ///
            [, df(string) by(varname numeric) cross(varname numeric) BINary ///
@@ -592,6 +593,7 @@ program define _argcheck, rclass
 end
 
 // * Calculates percentages and proportions in Mata
+capture mata: mata drop _xtab_core_calc()
 mata:
 void _xtab_core_calc()
 {
