@@ -7,3 +7,4 @@ test/
 ~*
 .DS_Store
 Thumbs.db
+*.xlsx
