@@ -1,13 +1,13 @@
 # dtkit: Data Toolkit for Stata
 
-A comprehensive collection of Stata commands for data analysis, documentation, and statistical summaries with advanced features for research workflows.
+A lightweight Stata toolkit for efficient data analysis, documentation, and reporting. Streamlines research workflows with organized outputs.
 
 ## Key Features
 
 - **Frequency Analysis** (`dtfreq`): Create detailed frequency tables with cross-tabulation, binary variable formatting, and totals
 - **Metadata Documentation** (`dtmeta`): Extract and organize comprehensive dataset documentation including variable information, value labels, and notes
-- **Descriptive Statistics** (`dtsum`): Generate customizable summary statistics with grouping and comprehensive statistical measures
-- **Excel Integration**: Direct export capabilities for `dtfreq` and `dtsum` with customizable formatting
+- **Descriptive Statistics** (`dtstat`): Generate customizable summary statistics with grouping and comprehensive statistical measures
+- **Excel Integration**: Direct export capabilities for `dtfreq` and `dtstat` with customizable formatting
 - **Frame-based Results**: Organized output in separate frames for easy navigation and analysis
 - **Performance Optimization**: Optional `gtools` integration for faster processing of large datasets
 - **Flexible Grouping**: Support for multiple grouping variables with automatic totals calculation
@@ -59,12 +59,12 @@ dtmeta [using filename] [, options]
 
 **Output:** Creates 3 frames: `_dtvars` (variables + value labels), `_dtnotes` (variable notes), `_dtinfo` (dataset notes). With `merge` option, creates additional `_dtmeta` frame.
 
-### `dtsum`
+### `dtstat`
 Produces comprehensive descriptive statistics datasets with support for grouping variables, custom statistics selection, and Excel export functionality.
 
 **Syntax:**
 ```stata
-dtsum varlist [if] [in] [weight] [using filename] [, options]
+dtstat varlist [if] [in] [weight] [using filename] [, options]
 ```
 
 **Options:**
@@ -99,13 +99,13 @@ dtfreq education_level
 dtmeta, report
 
 * Generate descriptive statistics for numeric variables
-dtsum income age height weight
+dtstat income age height weight
 
 * Frequency table excluding missing values
 dtfreq income_category, nomiss
 
 * Descriptive statistics with grouping
-dtsum test_scores, by(school_id treatment_group)
+dtstat test_scores, by(school_id treatment_group)
 
 * Cross-tabulation with row and column grouping
 dtfreq treatment_response, rowby(gender) colby(age_group)
@@ -114,7 +114,7 @@ dtfreq treatment_response, rowby(gender) colby(age_group)
 dtmeta using "survey_data.dta", saving(metadata) replace report
 
 * Custom statistics selection
-dtsum revenue profit, stats(count mean median sd min max p25 p75)
+dtstat revenue profit, stats(count mean median sd min max p25 p75)
 
 * Convert binary variables to yes/no format
 dtfreq employed married, yesno
@@ -123,11 +123,11 @@ dtfreq employed married, yesno
 dtfreq satisfaction_score using "results.xlsx"
 
 * Export statistics with custom Excel options
-dtsum financial_vars*, using "stats.xlsx", exopt(sheet("Summary", replace) firstrow(varlabels))
+dtstat financial_vars*, using "stats.xlsx", exopt(sheet("Summary", replace) firstrow(varlabels))
 
 * Use fast processing with gtools (if installed)
 dtfreq multiple_vars, fast
-dtsum large_dataset_vars*, fast by(region)
+dtstat large_dataset_vars*, fast by(region)
 ```
 
 ### Advanced Examples
@@ -150,7 +150,7 @@ dtfreq outcome_vars*, fast rowby(treatment_group) colby(time_period)
 For more detailed examples, see the files in the `examples/` folder:
 - `dtfreq_examples.do` - Demonstrates dtfreq usage with various options
 - `dtmeta_examples.do` - Demonstrates dtmeta usage  
-- `dtsum_examples.do` - Demonstrates dtsum usage
+- `dtstat_examples.do` - Demonstrates dtstat usage
 
 ## Getting Help
 
@@ -159,7 +159,7 @@ For help with any command, use Stata's built-in help system:
 ```stata
 help dtfreq   // Frequency tables and cross-tabulations
 help dtmeta   // Metadata documentation and extraction  
-help dtsum    // Descriptive statistics and summaries
+help dtstat    // Descriptive statistics and summaries
 help dtkit    // General package information
 ```
 
