@@ -90,6 +90,9 @@ program define _makevallab, rclass
     syntax , source_frame(name) target_frame(name)
     frame copy `source_frame' `target_frame', replace
     frame `target_frame': uselabel, clear var
+    frame `target_frame' {
+        if _N == 0 exit
+    }
     frame `target_frame': ren lname vallab
     frame `target_frame': quietly generate varname = ""
     foreach lbl in `r(__labnames__)' {
