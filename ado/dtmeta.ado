@@ -11,6 +11,7 @@ program define dtmeta, rclass
 
     // Define frames
     local source_frame `r(source_frame)'
+    local _defaultframe `r(_defaultframe)'
     foreach frname in _dtvars _dtlabel _dtnotes _dtinfo {
         local `frname' "`frname'"
         capture frame drop `frname'
@@ -38,6 +39,8 @@ program define dtmeta, rclass
 
     // export to excel
     if `"`excel'"' != "" _toexcel, excel(`excel')
+    if "`_defaultframe'" != "" cwf `_defaultframe'
+    return local source_frame `source_frame'
 end
 
 // * create variable metadata
@@ -276,6 +279,7 @@ program define _argload, rclass
     // define dataset
     if "`using'" != "" {
         if `_inmemory' == 1 & "`clear'" == "" {
+            return local _defaultframe = c(frame)
             capture frame drop _dtsource
             frame create _dtsource
             cwf _dtsource
