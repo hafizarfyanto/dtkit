@@ -56,19 +56,19 @@
 {pstd}
 {cmd:dtfreq} produces comprehensive frequency datasets from one or more numeric variables. 
 The command creates detailed frequency tables with counts, proportions, and percentages, 
-optionally organized by row and column groupings. Results are stored in a new frame 
+optionally organized by row and column groupings. Results are stored in a new {help frame}
 and can be exported to Excel format.
 
 {pstd}
-Unlike basic frequency commands, {cmd:dtfreq} provides:
+Unlike basic frequency commands (e.g., {help tabulate} or {help contract}), {cmd:dtfreq} provides:
 
-{phang2}• Multiple variables processed simultaneously{p_end}
-{phang2}• Cross-tabulation capabilities with row and column groupings{p_end}
-{phang2}• Flexible statistics calculation (row, column, or cell proportions/percentages){p_end}
-{phang2}• Automatic total calculations{p_end}
-{phang2}• Value label preservation and display{p_end}
-{phang2}• Binary variable reshaping for yes/no analysis{p_end}
-{phang2}• Direct Excel export functionality{p_end}
+{phang2}• Processing of multiple variables simultaneously.{p_end}
+{phang2}• Cross-tabulation capabilities, creating tables with row and column groupings defined by variables.{p_end}
+{phang2}• Flexible statistics calculation (row, column, or cell proportions/percentages).{p_end}
+{phang2}• Automatic calculation of totals for groups and overall.{p_end}
+{phang2}• Preservation and display of value labels in the output dataset.{p_end}
+{phang2}• Binary variable reshaping, which structures variables with yes/no type responses into separate columns for each category.{p_end}
+{phang2}• Direct Excel export functionality for the resulting dataset.{p_end}
 
 {marker options}{...}
 {title:Options}
@@ -76,50 +76,58 @@ Unlike basic frequency commands, {cmd:dtfreq} provides:
 {dlgtab:Main}
 
 {phang}
-{opt df(framename)} specifies the name of the frame, i.e. {it:framename}, where results will be stored. If not specified, results are stored in frame {cmd:_df}. Any existing frame with 
-this name will be replaced.
+{opt df(framename)} specifies the name of the {help frame} where the resulting dataset will be stored.
+If {it:framename} is not specified, results are stored in a frame named {cmd:_df}.
+Any existing frame with the specified name will be replaced.
 
 {phang}
-{opt by}({varname}) creates frequency tables organized by row groups. The specified
-variable defines the grouping, and totals are automatically calculated for each group. A "Total" row (coded as -1) is added to show overall frequencies.
+{opt by}({varname}) creates frequency tables organized by row groups based on the categories of {it:varname}.
+The specified variable defines these row groupings. Totals are automatically calculated for each group,
+and an overall "Total" row (coded as -1 in the {it:varname} column of the output frame, unless a value label is defined for -1 for that variable) is added to show overall frequencies.
 
 {phang}
-{opt cross}({varname}) creates frequency tables organized by column groups. The specified 
-variable defines the column structure, with separate frequency, proportion, and percentage 
-columns for each value. Cannot be the same variable as {opt by}.
+{opt cross}({varname}) creates frequency tables with column groups based on the categories of {it:varname}.
+The specified variable defines this column structure, creating separate sets of frequency, proportion,
+and percentage columns for each of its values. This option cannot be used with the same variable specified in {opt by()}.
 
 {phang}
-{opt binary} reshapes the output for binary variables containing only yes/no responses. This option creates separate columns for each response category. When combined with 
-{opt cross}, may produce complex output structures.
+{opt binary} reshapes the output for binary variables (variables with only two distinct nonmissing values, typically representing yes/no, true/false, or 0/1).
+This option creates separate columns in the output dataset for each response category of the binary variable.
+When combined with {opt cross}, this may produce more complex output structures.
 
 {dlgtab:Statistics}
 
 {phang}
-{opt stats(statlist)} specifies which statistical directions to calculate, following the syntax of {help tabulate}. Options are:
+{opt stats(statlist)} specifies the direction for calculating proportions or percentages, similar to the options in {help tabulate}. Options are:
 
-{phang2}{cmdab:col} - column proportions/percentages (default){p_end}
-{phang2}{cmdab:row} - row proportions/percentages{p_end}
-{phang2}{cmdab:cell} - cell proportions/percentages{p_end}
+{phang2}{cmdab:col} - calculate column proportions/percentages (default). This means percentages are calculated relative to the column totals.{p_end}
+{phang2}{cmdab:row} - calculate row proportions/percentages. This means percentages are calculated relative to the row totals.{p_end}
+{phang2}{cmdab:cell} - calculate cell proportions/percentages. This means percentages are calculated relative to the overall total count.{p_end}
 
-{pmore}Multiple options can be specified (e.g., {cmd:stats(row col)}). Default is {cmd:col}. Can only be used when {opt cross} is also specified.
+{pmore}Multiple options can be specified (e.g., {cmd:stats(row col)}). The default is {cmd:col}.
+This option is effective when {opt cross()} is also specified, as it determines the denominator for percentage calculations.
 
 {phang}
-{opt type(typelist)} specifies which types of statistics to display. Options are:
+{opt type(typelist)} specifies the type of statistics to display. Options are:
 
-{phang2}{cmdab:prop} - proportions (0-1 scale, default){p_end}
-{phang2}{cmdab:pct} - percentages (0-100 scale){p_end}
+{phang2}{cmdab:prop} - display proportions (scaled from 0 to 1; default).{p_end}
+{phang2}{cmdab:pct} - display percentages (scaled from 0 to 100).{p_end}
 
-{pmore}Both can be specified together (e.g., {cmd:type(prop pct)}). Default is {cmd:prop}.
+{pmore}Both types can be specified together (e.g., {cmd:type(prop pct)}). The default is {cmd:prop}.
 
 {dlgtab:Display}
 
 {phang}
-{opt format(%fmt)} specifies the {helpb format:display format} for all numeric variables in the output. If not specified, {cmd:dtfreq} automatically applies appropriate formatting: %20.0fc for integers, %6.3fc for proportions (0-1), and %20.1fc for other decimal numbers. Must strictly follow Stata 
-{helpb format:formatting}.
+{opt format(%fmt)} specifies the {helpb format:display format} for all numeric statistic variables
+(frequencies, proportions, percentages) in the output dataset. If not specified, {cmd:dtfreq} automatically
+applies suitable formats: {cmd:%20.0fc} for counts, {cmd:%6.3fc} for proportions (0-1),
+and {cmd:%20.1fc} for percentages (0-100) and other decimal numbers.
+The format must strictly follow Stata's {helpb format:formatting rules}.
 
 {phang}
-{opt nomiss} excludes observations with missing values from the analysis. By default, 
-missing values are included in frequency calculations. Enabling this option may help us produce correct proportions/percentages.
+{opt nomiss} excludes observations with missing values in any of the {varlist} variables from all calculations.
+By default, missing values in {varlist} are treated as a distinct category for frequency counts.
+Specifying {opt nomiss} ensures that proportions and percentages are calculated based only on nonmissing observations.
 
 {dlgtab:Export}
 
@@ -229,8 +237,8 @@ command. Can only be used with {cmd:using}.
 {phang2}• {opt type(prop)} includes proportion variables{p_end}
 {phang2}• {opt type(pct)} includes percentage variables{p_end}
 
-{pstd}When {opt cross} is specified, all variables are reshaped wide with numeric suffixes for each column group value.{p_end}
-{pstd}When {opt binary} is specified, variables are reshaped with prefixes indicating response categories.{p_end}
+{pstd}When {opt cross}({it:varname}) is specified, the output variables representing frequencies and statistics are reshaped wide. This means that for each category of the {it:varname} specified in {opt cross()}, a new set of variables is created, typically with numeric suffixes (e.g., {cmd:freq_1}, {cmd:freq_2}, {cmd:colprop_1}, {cmd:colprop_2}) appended to the base variable names to distinguish the column groups.{p_end}
+{pstd}When {opt binary} is specified, variables in the output dataset are structured to represent the different response categories of the binary input variable. This often involves creating prefixed variable names (e.g., {cmd:yes_variablename}, {cmd:no_variablename}) or similar structures to clearly indicate each response category within the reshaped data.{p_end}
 
 {pstd}
 The active frame remains unchanged unless an error occurs during frame switching.

@@ -40,18 +40,21 @@
 
 {pstd}
 {cmd:dtmeta} extracts comprehensive metadata from a Stata dataset and organizes it into 
-separate frames for easy analysis and documentation. The command creates up to four frames 
-containing different aspects of dataset metadata:
+separate {help frame:frames} for easy analysis and documentation. The command creates up to four frames,
+each containing different aspects of the dataset's metadata:
 
 {phang2}• Variable metadata ({cmd:_dtvars}){p_end}
 {phang2}• Value label metadata ({cmd:_dtlabel}){p_end}
 {phang2}• Variable notes ({cmd:_dtnotes}){p_end}
-{phang2}• Dataset information and notes ({cmd:_dtinfo}){p_end}
+{phang2}• Dataset information and characteristics ({cmd:_dtinfo}){p_end}
 
 {pstd}
-{cmd:dtmeta} can process data currently in memory or read from an external file specified 
-with the {cmd:using} qualifier. The command preserves the original data in memory unless 
-the {cmd:clear} option is specified with external data loading.
+{cmd:dtmeta} can process the dataset currently in Stata's memory or read metadata from an
+external Stata data file ({cmd:.dta} file) specified using the {cmd:using} qualifier.
+When {cmd:using} is specified, the dataset in memory remains unchanged unless the {cmd:clear}
+option is also specified. If {cmd:clear} is specified with {cmd:using}, the dataset currently
+in memory will be dropped and replaced by the data from the specified file before metadata extraction.
+If {cmd:dtmeta} is used without {cmd:using}, it processes the active dataset in memory.
 
 {marker options}{...}
 {title:Options}
@@ -59,131 +62,142 @@ the {cmd:clear} option is specified with external data loading.
 {dlgtab:Main}
 
 {phang}
-{opt clear} removes the original dataset from memory after loading external data with 
-{cmd:using}. Only valid when used together with {cmd:using}. When data is loaded from 
-an external file, {cmd:clear} prevents preservation of the original data in memory.
+{opt clear} may only be specified with {cmd:using}. It specifies that the data from
+{it:filename} be loaded into memory, replacing the data currently in memory.
+Using {cmd:dtmeta} with {cmd:using} without {opt clear} processes the metadata from
+{it:filename} while leaving the data in memory unchanged.
 
 {phang}
-{opt replace} allows {cmd:dtmeta} to overwrite existing Excel files when using the 
-{cmd:excel()} option. Only valid when used together with {cmd:excel()}. When not specified, 
-the command will attempt to modify existing Excel files by adding new sheets.
+{opt replace} allows {cmd:dtmeta} to overwrite an existing Excel file when the
+{cmd:excel()} option is specified. If {cmd:excel()} is specified and an Excel file
+with the same name already exists, {opt replace} is required to overwrite it.
+Without {opt replace}, {cmd:dtmeta} will issue an error if the file exists.
+This option is only valid when {cmd:excel()} is also specified.
 
 {phang}
-{opt report} displays a comprehensive metadata extraction report showing:
-- Source dataset information (filename, variables, observations)
-- Summary of created frames with row counts
-- Clickable frame access commands for easy navigation
-This option provides detailed feedback about the metadata extraction process.
+{opt report} displays a summary report in the Stata console after metadata extraction.
+This report includes:
+{p_end
+}{phang2}• Information about the source dataset (e.g., filename, number of variables, number of observations).{p_end}
+{phang2}• A summary of the metadata frames created, including the number of rows in each.{p_end}
+{phang2}• Clickable links to view each created frame (e.g., {stata "frame _dtvars: list"}).{p_end}
+{pstd}This option provides immediate feedback on the metadata extraction process.
 
 {phang}
-{opt excel(string)} exports all metadata frames to an Excel file with the specified filename. 
-Each frame is saved as a separate worksheet within the Excel file. Only valid when used 
-together with the {cmd:replace} option.
+{opt excel(string)} exports all created metadata frames to an Excel file named {it:string}.
+Each frame is saved as a separate worksheet within the Excel file. The worksheet names will
+correspond to the frame names (e.g., _dtvars, _dtlabel). If the specified Excel file
+already exists, the {opt replace} option must also be used to overwrite it.
 
 {marker remarks}{...}
 {title:Remarks}
 
 {pstd}
-{cmd:dtmeta} creates a metadata documentation system using Stata's frame 
-functionality. The command extracts and organizes metadata that is often scattered 
-across different dataset characteristics.
+{cmd:dtmeta} facilitates dataset documentation by systematically extracting metadata into
+Stata frames. This organization allows for easier review and programmatic access to
+dataset characteristics.
 
 {pstd}
 {ul:{bf:Frame Structure}}
 
 {pstd}
-All frames include a {cmd:_level} variable to identify the metadata level and are labeled 
-with descriptive dataset labels for easy identification.
+All frames created by {cmd:dtmeta} include a variable named {cmd:_level}. This variable
+contains a string that identifies the type or level of metadata contained in each row
+(e.g., "variable" for rows in {cmd:_dtvars}, "value label" for rows in {cmd:_dtlabel}).
+Additionally, each frame is assigned a descriptive frame label.
 
 {pstd}
 {ul:{bf:Frame Contents}}
 
 {pstd}
-{it:_dtvars} frame contains variable metadata:
-
-{phang2}• {cmd:_level}: Metadata level indicator ("variable"){p_end}
-{phang2}• {cmd:varname}: Variable name{p_end}
-{phang2}• {cmd:position}: Variable order in the dataset{p_end}
-{phang2}• {cmd:type}: Storage type{p_end}
-{phang2}• {cmd:format}: Display format{p_end}
-{phang2}• {cmd:vallab}: Value label name{p_end}
-{phang2}• {cmd:varlab}: Variable label{p_end}
-
-{pstd}
-{it:_dtlabel} frame contains value label metadata:
-
-{phang2}• {cmd:_level}: Metadata level indicator ("value label"){p_end}
-{phang2}• {cmd:varname}: Variable name using the value label{p_end}
-{phang2}• {cmd:index}: Value index within label{p_end}
-{phang2}• {cmd:vallab}: Value label name{p_end}
-{phang2}• {cmd:value}: Numeric value{p_end}
-{phang2}• {cmd:label}: Value label text{p_end}
-{phang2}• {cmd:trunc}: Indicator if label text is truncated{p_end}
+The {cmd:_dtvars} frame contains variable-level metadata:
+{p2colset 5 25 29 2}{...}
+{p2col : {cmd:_level}}Metadata level identifier (e.g., "variable"){p_end}
+{p2col : {cmd:varname}}Variable name{p_end}
+{p2col : {cmd:position}}Position of the variable in the dataset order{p_end}
+{p2col : {cmd:type}}Storage type of the variable (e.g., {cmd:int}, {cmd:float}, {cmd:str##}){p_end}
+{p2col : {cmd:format}}Display format of the variable (e.g., {cmd:%9.0g}, {cmd:%8.2f}){p_end}
+{p2col : {cmd:vallab}}Name of the value label set associated with the variable, if any{p_end}
+{p2col : {cmd:varlab}}Variable label{p_end}
+{p2colreset}{...}
 
 {pstd}
-{it:_dtnotes} frame contains variable notes:
-
-{phang2}• {cmd:_level}: Metadata level indicator ("variable"){p_end}
-{phang2}• {cmd:varname}: Variable name{p_end}
-{phang2}• {cmd:_note_id}: Note sequence number{p_end}
-{phang2}• {cmd:_note_text}: Note content (strL type){p_end}
+The {cmd:_dtlabel} frame contains detailed information about value labels:
+{p2colset 5 25 29 2}{...}
+{p2col : {cmd:_level}}Metadata level identifier (e.g., "value label"){p_end}
+{p2col : {cmd:varname}}Name of a variable that uses {cmd:vallab}{p_end}
+{p2col : {cmd:index}}Order/index of the specific labeled value within {cmd:vallab}{p_end}
+{p2col : {cmd:vallab}}Name of the value label set{p_end}
+{p2col : {cmd:value}}The numeric value being labeled{p_end}
+{p2col : {cmd:label}}The text of the label corresponding to {cmd:value}{p_end}
+{p2col : {cmd:trunc}}Indicator for truncated label text (1 if truncated, 0 otherwise){p_end}
+{p2colreset}{...}
 
 {pstd}
-{it:_dtinfo} frame contains dataset-level information:
+The {cmd:_dtnotes} frame contains notes attached to variables:
+{p2colset 5 25 29 2}{...}
+{p2col : {cmd:_level}}Metadata level identifier (e.g., "variable"){p_end}
+{p2col : {cmd:varname}}Name of the variable to which the note is attached{p_end}
+{p2col : {cmd:_note_id}}Sequence number of the note for the variable{p_end}
+{p2col : {cmd:_note_text}}Full text content of the note (strL){p_end}
+{p2colreset}{...}
 
-{phang2}• {cmd:_level}: Metadata level indicator ("dataset"){p_end}
-{phang2}• {cmd:dta_note_id}: Dataset note sequence number{p_end}
-{phang2}• {cmd:dta_note}: Dataset note content (strL type){p_end}
-{phang2}• {cmd:dta_obs}: Number of observations{p_end}
-{phang2}• {cmd:dta_vars}: Number of variables{p_end}
-{phang2}• {cmd:dta_label}: Dataset label{p_end}
-{phang2}• {cmd:dta_ts}: Dataset timestamp{p_end}
+{pstd}
+The {cmd:_dtinfo} frame contains dataset-level information and notes:
+{p2colset 5 25 29 2}{...}
+{p2col : {cmd:_level}}Metadata level identifier (e.g., "dataset"){p_end}
+{p2col : {cmd:dta_note_id}}Sequence number of a dataset-level note{p_end}
+{p2col : {cmd:dta_note}}Full text content of a dataset-level note (strL){p_end}
+{p2col : {cmd:dta_obs}}Number of observations in the dataset{p_end}
+{p2col : {cmd:dta_vars}}Number of variables in the dataset{p_end}
+{p2col : {cmd:dta_label}}Dataset label{p_end}
+{p2col : {cmd:dta_ts}}Timestamp of when the dataset was last saved{p_end}
+{p2colreset}{...}
 
 {pstd}
 {ul:{bf:Frame Management}}}
 
 {pstd}
-{cmd:dtmeta} automatically replaces any existing metadata frames ({cmd:_dtvars}, {cmd:_dtlabel}, 
-{cmd:_dtnotes}, {cmd:_dtinfo}) each time it runs. This ensures that the metadata always reflects 
-the current state of the source dataset.
+Each time {cmd:dtmeta} is executed, it replaces any existing frames named {cmd:_dtvars},
+{cmd:_dtlabel}, {cmd:_dtnotes}, or {cmd:_dtinfo}. This ensures that the metadata frames
+always reflect the current state of the source dataset as of the last execution of {cmd:dtmeta}.
 
 {pstd}
 {ul:{bf:Excel Export}}}
 
 {pstd}
-When using the {cmd:excel()} option, the command exports all created metadata frames to separate 
-worksheets within a single Excel file. Without the {cmd:replace} option, the command attempts 
-to modify existing Excel files by adding new sheets. With {cmd:replace}, it creates a new file, 
-overwriting any existing file with the same name.
+When the {cmd:excel(filename)} option is specified, {cmd:dtmeta} exports all created
+metadata frames to separate worksheets within the specified Excel file. If an Excel file
+with the same name already exists, the {cmd:replace} option must also be specified to
+overwrite the existing file. Otherwise, an error will occur.
 
 {pstd}
 {ul:{bf:Empty Frames}}
 
 {pstd}
-If a dataset has no variable notes, the {cmd:_dtnotes} frame will not be created and 
-a note will be displayed. Similarly, if a dataset has no value labels, the {cmd:_dtlabel} 
-frame will not be created. The {cmd:_dtvars} and {cmd:_dtinfo} frames are always created 
-as they contain essential dataset information.
+If the source dataset does not contain any variable notes, the {cmd:_dtnotes} frame will not
+be created. Similarly, if the dataset has no defined value labels, the {cmd:_dtlabel} frame
+will not be created. A message is displayed in the console if these frames are not created due to
+the absence of corresponding metadata. The {cmd:_dtvars} and {cmd:_dtinfo} frames are always
+created, as datasets will always have variables and basic descriptive characteristics.
 
 {pstd}
 {ul:{bf:Reporting and Navigation}}}
 
 {pstd}
-The command always displays clickable frame access commands after completion, making it easy 
-to navigate between the created metadata frames and return to the source data. When the 
-{cmd:report} option is specified, additional detailed information is shown including:
-
-{phang2}• Source dataset information (filename, variable count, observation count){p_end}
-{phang2}• Summary of created frames with row counts{p_end}
-{phang2}• Detailed breakdown of metadata extraction results{p_end}
+Upon completion, {cmd:dtmeta} displays {help Stata_commands##clickable_links:clickable links} in the Stata Results window that allow easy access to view the contents of
+the created metadata frames (e.g., by executing {cmd:frame _dtvars: list}). If the
+{cmd:report} option is specified, a more detailed summary of the extraction process and
+the created frames is displayed.
 
 {pstd}
 {ul:{bf:Data Preservation}}
 
 {pstd}
-{cmd:dtmeta} automatically preserves the current dataset when working with data in memory. 
-When using {cmd:using} to load external data, the command can optionally preserve the 
-original data unless {cmd:clear} is specified.
+When {cmd:dtmeta} processes the dataset currently in memory (i.e., {cmd:using} is not specified),
+the dataset in memory is preserved. If {cmd:using} is specified, the dataset in memory
+is also preserved unless the {cmd:clear} option is additionally specified, in which case
+the data in memory is replaced by the data from the specified file before metadata extraction.
 
 {marker examples}{...}
 {title:Examples}
