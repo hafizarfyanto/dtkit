@@ -1,5 +1,5 @@
 capture program drop dtmeta
-program define dtmeta
+program define dtmeta, rclass
     *! Version 2.1.0 Hafiz 30May2025
     * Module to produce three metadata datasets in separate frames
     
@@ -15,22 +15,34 @@ program define dtmeta
     }
 
 
-    // Create metadata datasets via subroutines
+    // Create and check metadata datasets
     _makevars , source_frame(`source_frame') target_frame(`_dtvars')
+    _labelframes, frame(`_dtvars')  // dtvars always has content
+    
     _makevarnotes , source_frame(`source_frame') target_frame(`_dtnotes')
+    _isempty, frame(`_dtnotes') message("the dataset has no variable notes")
+    
     _makevallab , source_frame(`source_frame') target_frame(`_dtlabel')
+    _isempty, frame(`_dtlabel') message("the dataset has no value labels")
+    
     _makedtainfo , source_frame(`source_frame') target_frame(`_dtinfo')
+    _labelframes, frame(`_dtinfo')  // dtinfo always has content
+
+    // store returned results
+    quietly describe, varlist
+    return add
+    quietly labelbook
+    return add
 end
 
 // * create variable metadata
 capture program drop _makevars
-program define _makevars
+program define _makevars, rclass
     syntax , source_frame(name) target_frame(name)
     frame copy `source_frame' `target_frame', replace
-    frame `target_frame': describe, replace clear
+    frame `target_frame': quietly describe, replace clear
     frame `target_frame': rename name varname
     frame `target_frame': quietly generate _level = "variable", before(position)
-    frame `target_frame': list, noobs
 end
 
 // * create variable notes
@@ -65,12 +77,11 @@ program define _makevarnotes
     }
     frame copy `collector' `target_frame', replace
     frame drop `collector'
-    frame `target_frame': list, noobs
 end
 
 // * create value labels
 capture program drop _makevallab
-program define _makevallab
+program define _makevallab, rclass
     syntax , source_frame(name) target_frame(name)
     frame copy `source_frame' `target_frame', replace
     frame `target_frame': uselabel, clear var
@@ -83,10 +94,9 @@ program define _makevallab
     frame `target_frame': quietly generate _level = "value label"
     frame `target_frame': quietly by vallab: generate index = _n
     frame `target_frame': order _level varname index vallab
-    frame `target_frame': list, noobs
 end
 
-// Subroutine 4: Dataset notes
+// * Dataset-level info
 capture program drop _makedtainfo
 program define _makedtainfo
     syntax , source_frame(name) target_frame(name)
@@ -126,27 +136,81 @@ program define _makedtainfo
         quietly generate int dta_vars = `nvars'
         quietly generate strL dta_label = `"`dlabel'"'
         quietly generate dta_ts = clock("`timestamp'", "DMY hm")
-        format dta_t %tc
+        format dta_ts %tc
     }
 
     frame copy `collector' `target_frame', replace
     frame drop `collector'
-    frame `target_frame': list, noobs
 end
 
-// todo: labeling variables, using and exopt to export datasets to excel, merge in wide format.
+* New subroutine: Check if frame is empty and handle accordingly
+capture program drop _isempty
+program define _isempty
+    syntax , frame(name) message(string)
+    frame `frame' {
+        local emptyframe = c(N)
+        if `emptyframe' > 0 _labelframes, frame(`frame')
+    }
+    if `emptyframe' == 0 {
+        frame drop `frame'
+        di as text "Note: `message'"
+        exit 0
+    }
+end
+
+capture program drop _labelframes
+program define _labelframes
+    syntax, frame(name)
+    
+    if "`frame'" == "_dtvars" {
+        frame `frame': label variable varname "Variable name"
+        frame `frame': label variable _level "Metadata level"
+        frame `frame': label variable position "Variable order in dataset"
+        frame `frame': label variable type "Storage type"
+        frame `frame': label variable format "Display format"
+        frame `frame': label variable vallab "Value label name"
+        frame `frame': label variable varlab "Variable label"
+    }
+    else if "`frame'" == "_dtnotes" {
+        frame `frame': label variable varname "Variable name"
+        frame `frame': label variable _level "Metadata level"
+        frame `frame': label variable _note_id "Note ID"
+        frame `frame': label variable _note_text "Note content"
+    }
+    else if "`frame'" == "_dtlabel" {
+        frame `frame': label variable varname "Variable name"
+        frame `frame': label variable _level "Metadata level"
+        frame `frame': label variable index "Value index"
+        frame `frame': label variable vallab "Value label name"
+        frame `frame': label variable value "Numeric value"
+        frame `frame': label variable label "Value label"
+        frame `frame': label variable trunc "= 1 if label text is truncated"
+    }
+    else if "`frame'" == "_dtinfo" {
+        frame `frame': label variable _level "Metadata level"
+        frame `frame': label variable dta_note_id "Note ID"
+        frame `frame': label variable dta_note "Dataset note"
+        frame `frame': label variable dta_obs "Observation count"
+        frame `frame': label variable dta_vars "Variable count"
+        frame `frame': label variable dta_label "Dataset label"
+        frame `frame': label variable dta_ts "Dataset timestamp"
+    }
+end
+
+// todo: using and exopt to export datasets to excel, merge in wide format.
 
 clear frames
 sysuse nlsw88, clear
-notes union : note 1
-notes union : note 2
-notes union : note 3
-notes south : note 1
-notes south : note 2
-notes south : note 3
+// notes union : note 1
+// notes union : note 2
+// notes union : note 3
+// notes south : note 1
+// notes south : note 2
+// notes south : note 3
 
 // set trace on
 // set tracedepth 2
 dtmeta
 set trace off
+return list
 exit, clear
