@@ -41,6 +41,9 @@ program define dtmeta, rclass
     if `"`excel'"' != "" _toexcel, excel(`excel')
     if "`_defaultframe'" != "" cwf `_defaultframe'
     return local source_frame `source_frame'
+
+    // Generate report if requested
+    _makereport, source_frame(`source_frame') clear(`clear') saving(`excel') report(`report')
 end
 
 // * create variable metadata
@@ -293,4 +296,108 @@ program define _argload, rclass
     }
     else if "`using'" == "" & `_inmemory' == 1 return local source_frame = c(frame)
 
+end
+
+// * report metadata creation
+capture program drop _makereport
+program define _makereport
+
+    syntax, source_frame(name) [clear(string) saving(string) report(string)]
+    
+    // Get original dataset information
+    frame `source_frame' {
+        local orig_filename = c(filename)
+        local orig_k = c(k)
+        local orig_N = c(N)
+        
+        // Extract just filename without path
+        if `"`orig_filename'"' != "" {
+            if ustrregexm("`orig_filename'", "^(.*[/\\])?([^/\\]+?)(\.[^./\\]+)?$") {
+                local orig_filename = ustrregexs(2) + ustrregexs(3)
+            }
+        }
+        else {
+            local orig_filename "data in memory"
+        }
+    }
+    
+    // Count rows in each frame and check existence
+    quietly frames dir _dt*
+    local existing_frames "`r(frames)'"
+    
+    local frame_count = 0
+    local var_frame_rows = 0
+    local total_var_note_entries = 0
+    local dta_note_count = 0
+    local vallab_frame_rows = 0
+    
+    // Check _dtvars (always exists)
+    if `: list posof "_dtvars" in existing_frames' {
+        frame _dtvars: local var_frame_rows = _N
+        local ++frame_count
+    }
+    
+    // Check _dtnotes
+    if `: list posof "_dtnotes" in existing_frames' {
+        frame _dtnotes: local total_var_note_entries = _N
+        local ++frame_count
+    }
+    
+    // Check _dtlabel  
+    if `: list posof "_dtlabel" in existing_frames' {
+        frame _dtlabel: local vallab_frame_rows = _N
+        local ++frame_count
+    }
+    
+    // Check _dtinfo (always exists)
+    if `: list posof "_dtinfo" in existing_frames' {
+        frame _dtinfo: local dta_note_count = _N
+        local ++frame_count
+    }
+    if "`report'" != "" {
+        // Display summary
+        display as result _n "Dataset metadata created successfully in " as result `frame_count' " frames"
+        display as result "Source: " as result "`orig_filename'"
+        display as result "Variables documented: " as result `orig_k'
+        display as result "Original observations: " as result `orig_N'
+        display as result _n "Frames created:"
+        
+        local frame_num = 1
+        if `: list posof "_dtvars" in existing_frames' {
+            display as result "  `frame_num'. _dtvars (variables metadata): " as result `var_frame_rows' " rows"
+            local ++frame_num
+        }
+        
+        if `: list posof "_dtnotes" in existing_frames' {
+            display as result "  `frame_num'. _dtnotes (variable notes): " as result `total_var_note_entries' " rows"
+            local ++frame_num
+        }
+        
+        if `: list posof "_dtlabel" in existing_frames' {
+            display as result "  `frame_num'. _dtlabel (value labels): " as result `vallab_frame_rows' " rows"
+            local ++frame_num
+        }
+        
+        if `: list posof "_dtinfo" in existing_frames' {
+            display as result "  `frame_num'. _dtinfo (dataset notes): " as result `dta_note_count' " rows"
+        }
+    }
+
+
+    // Display frame access commands
+    display as result _n "Finish creating metadata datasets. Frame access commands:"
+    if `: list posof "_dtvars" in existing_frames' {
+        display as text "  " as smcl "{stata frame change _dtvars}" as text "  // Variables + metadata"
+    }
+    if `: list posof "_dtnotes" in existing_frames' {
+        display as text "  " as smcl "{stata frame change _dtnotes}" as text " // Variable notes"
+    }
+    if `: list posof "_dtlabel" in existing_frames' {
+        display as text "  " as smcl "{stata frame change _dtlabel}" as text " // Value labels"
+    }
+    if `: list posof "_dtinfo" in existing_frames' {
+        display as text "  " as smcl "{stata frame change _dtinfo}" as text "  // Dataset metadata"
+    }
+    display as text "  " as smcl "{stata frame change `source_frame'}" as text "  // Return to source data"
+    
 end

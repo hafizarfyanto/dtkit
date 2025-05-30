@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 2.1.0  29may2025}{...}
+{* *! version 2.1.0  30may2025}{...}
 {vieweralsosee "[R] describe" "help describe"}{...}
 {vieweralsosee "[R] notes" "help notes"}{...}
 {vieweralsosee "[R] label" "help label"}{...}
@@ -28,11 +28,10 @@
 {synopthdr}
 {synoptline}
 {syntab:Main}
-{synopt:{opt c:lear}}clear original data from memory after creating metadata{p_end}
-{synopt:{opt s:aving(fileprefix)}}save metadata frames to files with specified prefix{p_end}
-{synopt:{opt rep:lace}}replace existing frames and files{p_end}
-{synopt:{opt m:erge}}create additional merged frame combining all metadata{p_end}
-{synopt:{opt report}}display full metadata extraction report{p_end}
+{synopt:{opt c:lear}}clear original data from memory after loading external data{p_end}
+{synopt:{opt rep:lace}}replace existing metadata frames{p_end}
+{synopt:{opt report}}display metadata extraction report{p_end}
+{synopt:{opt excel(string)}}export metadata frames to Excel file{p_end}
 {synoptline}
 {p2colreset}{...}
 
