@@ -4,35 +4,40 @@ program define dtmeta, rclass
     * Module to produce three metadata datasets in separate frames
     
     version 16
-    syntax [using/] [, Clear Saving(string) REPlace MERge REPORT]
+    syntax [using/] [, Clear REPlace REPORT excel(string asis)]
 
-    // Define default frame names
-    local source_frame = c(frame)
+    // validate inputs
+    _argload, clear(`clear') using(`using') replace(`replace') excel(`excel')
+
+    // Define frames
+    local source_frame `r(source_frame)'
     foreach frname in _dtvars _dtlabel _dtnotes _dtinfo {
         local `frname' "`frname'"
         capture frame drop `frname'
         capture frame create `frname'
     }
 
-
     // Create and check metadata datasets
     _makevars , source_frame(`source_frame') target_frame(`_dtvars')
-    _labelframes, frame(`_dtvars')  // dtvars always has content
+    _labelframes, frame(`_dtvars') source_frame(`source_frame') // dtvars always has content
     
     _makevarnotes , source_frame(`source_frame') target_frame(`_dtnotes')
-    _isempty, frame(`_dtnotes') message("the dataset has no variable notes")
+    _isempty, frame(`_dtnotes') message("the dataset has no variable notes") source_frame(`source_frame')
     
     _makevallab , source_frame(`source_frame') target_frame(`_dtlabel')
-    _isempty, frame(`_dtlabel') message("the dataset has no value labels")
+    _isempty, frame(`_dtlabel') message("the dataset has no value labels") source_frame(`source_frame')
     
     _makedtainfo , source_frame(`source_frame') target_frame(`_dtinfo')
-    _labelframes, frame(`_dtinfo')  // dtinfo always has content
+    _labelframes, frame(`_dtinfo') source_frame(`source_frame') // dtinfo always has content
 
     // store returned results
     quietly describe, varlist
     return add
     quietly labelbook
     return add
+
+    // export to excel
+    if `"`excel'"' != "" _toexcel, excel(`excel')
 end
 
 // * create variable metadata
@@ -146,10 +151,10 @@ end
 * New subroutine: Check if frame is empty and handle accordingly
 capture program drop _isempty
 program define _isempty
-    syntax , frame(name) message(string)
+    syntax , frame(name) message(string) source_frame(name)
     frame `frame' {
         local emptyframe = c(N)
-        if `emptyframe' > 0 _labelframes, frame(`frame')
+        if `emptyframe' > 0 _labelframes, frame(`frame') source_frame(`source_frame')
     }
     if `emptyframe' == 0 {
         frame drop `frame'
@@ -160,8 +165,19 @@ end
 
 capture program drop _labelframes
 program define _labelframes
-    syntax, frame(name)
-    
+    syntax, frame(name) source_frame(name)
+    // extract filename
+    frame `source_frame': local dataname = c(filename)
+    if `"`dataname'"' != "" {
+        local inputfile = subinstr(`"`dataname'"', `"""', "", .)
+        if ustrregexm("`inputfile'", "^(.*[/\\])?([^/\\]+?)(\.[^./\\]+)?$") {
+            local fullpath = ustrregexs(1)
+            local filename = ustrregexs(2)
+            local extension = ustrregexs(3)
+            local fullname = "`fullpath'`filename'`extension'"
+        }
+    }
+
     if "`frame'" == "_dtvars" {
         frame `frame': label variable varname "Variable name"
         frame `frame': label variable _level "Metadata level"
@@ -170,12 +186,14 @@ program define _labelframes
         frame `frame': label variable format "Display format"
         frame `frame': label variable vallab "Value label name"
         frame `frame': label variable varlab "Variable label"
+        frame `frame': label data "(`filename') Variable metadata"
     }
     else if "`frame'" == "_dtnotes" {
         frame `frame': label variable varname "Variable name"
         frame `frame': label variable _level "Metadata level"
         frame `frame': label variable _note_id "Note ID"
         frame `frame': label variable _note_text "Note content"
+        frame `frame': label data "(`filename') Variable notes"
     }
     else if "`frame'" == "_dtlabel" {
         frame `frame': label variable varname "Variable name"
@@ -185,6 +203,7 @@ program define _labelframes
         frame `frame': label variable value "Numeric value"
         frame `frame': label variable label "Value label"
         frame `frame': label variable trunc "= 1 if label text is truncated"
+        frame `frame': label data "(`filename') Value label metadata"
     }
     else if "`frame'" == "_dtinfo" {
         frame `frame': label variable _level "Metadata level"
@@ -194,23 +213,77 @@ program define _labelframes
         frame `frame': label variable dta_vars "Variable count"
         frame `frame': label variable dta_label "Dataset label"
         frame `frame': label variable dta_ts "Dataset timestamp"
+        frame `frame': label data "(`filename') Dataset metadata"
     }
 end
 
-// todo: using and exopt to export datasets to excel, merge in wide format.
+// * Saves the final table to Excel file
+capture program drop _toexcel
+program define _toexcel
 
-clear frames
-sysuse nlsw88, clear
-// notes union : note 1
-// notes union : note 2
-// notes union : note 3
-// notes south : note 1
-// notes south : note 2
-// notes south : note 3
+    syntax, [excel(string asis) replace(string)]
 
-// set trace on
-// set tracedepth 2
-dtmeta
-set trace off
-return list
-exit, clear
+    // export to excel
+    if `"`excel'"' != "" {
+        local inputfile = subinstr(`"`excel'"', `"""', "", .)
+        if ustrregexm("`inputfile'", "^(.*[/\\])?([^/\\]+?)(\.[^./\\]+)?$") {
+            local fullpath = ustrregexs(1)
+            local filename = ustrregexs(2)
+            local extension = ustrregexs(3)
+            local fullname = "`fullpath'`filename'`extension'"
+        }
+    }
+
+    if "`fullname'" != "" {
+        // Set export options
+        quietly frames dir _dt*
+        if "`replace'" == "" local exportcmd `"`fullname', sheet("`sheetname'", modify) firstrow(varlabels)"'
+        else local exportcmd `"`fullname', sheet("`sheetname'") firstrow(varlabels) replace"'
+        foreach fr in `r(frames)' {
+            frame `fr': local sheetname: data label
+            frame `fr': export excel using `exportcmd'
+        }
+    }
+
+end
+
+// * Checks if user inputs are valid before starting
+capture program drop _argload
+program define _argload, rclass
+    syntax, [using(string) clear(string) replace(string) excel(string)]
+
+    // clear only makes sense together with using
+    if "`clear'" != "" & "`using'" == "" {
+        display as error "option clear only allowed with using"
+        exit 198
+    }
+
+    // replace only makes sense together with excel
+    if "`replace'" != "" & "`excel'" == "" {
+        display as error "option replace only allowed with excel"
+        exit 198
+    }
+
+    local _inmemory = c(filename) != "" | c(N) > 0 | c(k) > 0 | c(changed) == 1
+    if `_inmemory' == 0 & "`using'" == "" {
+        display as error "No data source for generating metadata datasets."
+        exit 198
+    }
+
+    // define dataset
+    if "`using'" != "" {
+        if `_inmemory' == 1 & "`clear'" == "" {
+            capture frame drop _dtsource
+            frame create _dtsource
+            cwf _dtsource
+            return local source_frame "_dtsource"
+            quietly use `"`using'"', clear
+        }
+        else {
+            quietly use `"`using'"', clear
+            return local source_frame = c(frame)
+        }
+    }
+    else if "`using'" == "" & `_inmemory' == 1 return local source_frame = c(frame)
+
+end
