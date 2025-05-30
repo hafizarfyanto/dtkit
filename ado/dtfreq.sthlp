@@ -240,9 +240,10 @@ The active frame remains unchanged unless an error occurs during frame switching
 
 {pstd}Hafiz Arfyanto{p_end}
 {pstd}Email: {browse "mailto:hafizarfyanto@gmail.com":hafizarfyanto@gmail.com}{p_end}
+{pstd}GitHub: {browse "https://github.com/hafizarfyanto/dtkit":https://github.com/hafizarfyanto/dtkit}{p_end}
 
 {pstd}
-Program Version: {bf:2.0.0} (29 May 2025)
+Program Version: {bf:2.1.0} (29 May 2025)
 
 {title:Also see}
 

@@ -183,6 +183,7 @@ additional rows with value -1 in the grouping variables represent overall totals
 
 {pstd}Hafiz Arfyanto{p_end}
 {pstd}Email: {browse "mailto:hafizarfyanto@gmail.com":hafizarfyanto@gmail.com}{p_end}
+{pstd}GitHub: {browse "https://github.com/hafizarfyanto/dtkit":https://github.com/hafizarfyanto/dtkit}{p_end}
 
 {pstd}
 Program Version: {bf:2.1.0} (29 May 2025)
