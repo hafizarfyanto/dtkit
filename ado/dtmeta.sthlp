@@ -207,32 +207,33 @@ original data unless {cmd:clear} is specified.
 
 {pstd}{bf:Work with variable metadata}{p_end}
 
-        {cmd:. dtmeta, replace}
+        {cmd:. dtmeta using "https://www.stata-press.com/data/r18/fullauto.dta", clear}
         {cmd:. frame _dtvars: list varname type format vallab}
 
 {pstd}{bf:Analyze value label coverage}{p_end}
 
-        {cmd:. dtmeta, replace}
+        {cmd:. dtmeta}
         {cmd:. frame _dtvars: generate has_vallab = (vallab != "")}
         {cmd:. frame _dtvars: tab has_vallab}
 
 {pstd}{bf:Examine variable notes}{p_end}
 
-        {cmd:. dtmeta, replace}
+        {cmd:. notes make: test note}
+        {cmd:. dtmeta}
         {cmd:. frame _dtnotes: list varname _note_text}
 
 {pstd}{bf:Review dataset information}{p_end}
 
-        {cmd:. dtmeta, replace}
-        {cmd:. frame _dtnotes: list name note_text}
+        {cmd:. dtmeta}
+        {cmd:. frame _dtinfo: list, noobs}
 
 {pstd}{bf:Comprehensive workflow with external data and export}{p_end}
 
-        {cmd:. dtmeta using "mydata.dta", excel("mydata_metadata.xlsx") replace report clear}
+        {cmd:. dtmeta using "https://www.stata-press.com/data/r18/nlswork.dta", excel("mydata_metadata.xlsx") replace report clear}
 
 {pstd}{bf:Clear memory after loading external data}{p_end}
 
-        {cmd:. dtmeta using "mydata.dta", clear}
+        {cmd:. dtmeta using "https://www.stata-press.com/data/r18/nlswork.dta", clear}
 
 {marker results}{...}
 {title:Stored results}

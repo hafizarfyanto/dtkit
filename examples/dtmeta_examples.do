@@ -1,41 +1,46 @@
-clear frames
 // Basic metadata extraction from data in memory
 
-    . sysuse auto
-    . dtmeta
+        sysuse auto
+        dtmeta
 
 // Extract metadata from external file
 
-    . dtmeta using "https://www.stata-press.com/data/r18/nlswork.dta", replace
+        dtmeta using "https://www.stata-press.com/data/r18/nlswork.dta"
 
-// Save metadata to files with replace
+// Show detailed report with frame access commands
 
-    . dtmeta using "https://www.stata-press.com/data/r18/nlswork.dta", saving("meta_output") replace
+        dtmeta, report
 
-// Create merged metadata frame
+// Export to Excel with file replacement
 
-    . dtmeta, merge replace
-    . frame _dtmeta: tab frame_type
+        dtmeta, excel("dataset_metadata.xlsx") replace
 
-// Work with metadata
+// Work with variable metadata
 
-    . dtmeta using "https://www.stata-press.com/data/r18/nlswork.dta", merge replace
-    . frame _dtmeta: keep if frame_type == "variable"
+        dtmeta using "https://www.stata-press.com/data/r18/fullauto.dta", clear
+        frame _dtvars: list varname type format vallab
 
 // Analyze value label coverage
 
-    . dtmeta, replace
-    . frame _dtvars: generate has_vallab = (value_code != "")
-    . frame _dtvars: bysort name: egen max_vallab = max(has_vallab)
-    . frame _dtvars: by name: keep if _n == 1
-    . frame _dtvars: tab max_vallab
+        dtmeta
+        frame _dtvars: generate has_vallab = (vallab != "")
+        frame _dtvars: tab has_vallab
 
-// Document variables with notes
+// Examine variable notes
 
-    . dtmeta, replace
-    . frame _dtnotes: list name note_text
+        notes make: test note
+        dtmeta
+        frame _dtnotes: list varname _note_text
 
-// Comprehensive metadata report
+// Review dataset information
 
-    . dtmeta, merge saving("project_meta") replace report
-    . frame _dtmeta: list if frame_type == "dataset_note"
+        dtmeta
+        frame _dtinfo: list, noobs
+
+// Comprehensive workflow with external data and export
+
+        dtmeta using "https://www.stata-press.com/data/r18/nlswork.dta", excel("mydata_metadata.xlsx") replace report clear
+
+// Clear memory after loading external data
+
+        dtmeta using "https://www.stata-press.com/data/r18/nlswork.dta", clear

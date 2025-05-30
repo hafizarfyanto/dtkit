@@ -26,7 +26,7 @@ net install dtkit, from("https://raw.githubusercontent.com/hafizarfyanto/dtkit/m
 To ensure you have the most recent features and bug fixes:
 
 ```stata
-net install dtkit, replace from(https://hafizarfyanto.github.io/dtkit/)
+net install dtkit, replace from("https://raw.githubusercontent.com/hafizarfyanto/dtkit/main/")
 ```
 
 ## Uninstalling
