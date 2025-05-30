@@ -50,19 +50,23 @@ see {help weight}.
 {title:Description}
 
 {pstd}
-{cmd:dtstat} creates a dataset containing descriptive statistics for the specified numeric variables.
-The results are stored in a Stata frame, which can optionally be exported to Excel.
-Unlike {cmd:summarize} or {cmd:tabstat}, {cmd:dtstat} produces a dataset that can be further
-manipulated, merged, or exported for reporting purposes.
+{cmd:dtstat} creates a dataset containing descriptive statistics for the specified numeric {varlist}.
+The results are stored in a Stata {help frame}, which can optionally be exported to an Excel file
+using the {cmd:using} qualifier. Unlike {help summarize} or {help tabstat}, which primarily display
+results, {cmd:dtstat} produces a new dataset (frame). This output dataset can be further
+manipulated, merged with other datasets, or exported, making it suitable for reporting and complex data workflows.
 
 {pstd}
-When used with the {opt by()} option, {cmd:dtstat} creates statistics for each group as well as
-overall totals. The program automatically handles value labels and creates appropriate labels
-for the total rows.
+When the {opt by(varlist)} option is specified, {cmd:dtstat} computes statistics separately for each group
+defined by the {it:by_variables}. In this case, the output dataset includes rows for each group and
+additional rows representing overall totals. The program automatically preserves and uses value labels
+for the grouping variables and creates appropriate labels for the total rows (e.g., "Total").
 
 {pstd}
-The program uses Stata {helpb frames} to manage data efficiently and can optionally use {cmd:gtools}
-for faster processing with large datasets.
+{cmd:dtstat} leverages Stata {helpb frames} for efficient data management. For improved performance
+with large datasets, the {opt fast} option can be used, which utilizes commands from the
+{cmd:gtools} package (if installed; see {stata "ssc install gtools":ssc install gtools} and
+{stata "ssc install gcollapse":ssc install gcollapse}).
 
 
 {marker options}{...}
@@ -71,55 +75,68 @@ for faster processing with large datasets.
 {dlgtab:Main}
 
 {phang}
-{opt df(framename)} specifies the name of the frame where the output dataset will be stored.
-The default is {cmd:_df}. If a frame with this name already exists, it will be replaced.
+{opt df(framename)} specifies the name of the {help frame} that will contain the output dataset
+of descriptive statistics. The default is {cmd:_df}. If a frame with the specified name
+already exists, it will be replaced.
 
 {phang}
-{opt by(varlist)} specifies that statistics should be calculated separately for each
-combination of values in the specified variables. The program will also calculate
-overall totals across all groups. Value labels are preserved and "Total" labels are
-added for the total rows.
+{opt by(varlist)} specifies that statistics are to be computed separately for each group defined
+by the combinations of values of the variables in {it:varlist}. The output dataset will include
+rows for each of these groups. Overall totals across all groups are also calculated and included.
+Value labels of the {it:by_variables} are preserved in the output. Rows corresponding to totals
+are identified by a special value (typically -1, or another system missing value if -1 conflicts
+with actual data values) in the {it:by_variables} columns and are labeled "Total" or with the
+value label associated with that special value.
 
 {phang}
-{opt stats(statlist)} specifies which statistics to calculate. The default is
-{cmd:count mean median min max}. Available statistics include all those supported
-by the {cmd:collapse} command, such as:
+{opt stats(statlist)} specifies the list of statistics to be calculated. The default is
+{cmd:count mean median min max}. Any statistic supported by the {help collapse} command
+may be specified. Common statistics include:
 
 {pmore2}
 {cmd:count} - number of nonmissing observations{break}
 {cmd:mean} - arithmetic mean{break}
-{cmd:median} - median{break}
+{cmd:median} - median (50th percentile){break}
 {cmd:min} - minimum value{break}
 {cmd:max} - maximum value{break}
 {cmd:sd} - standard deviation{break}
-{cmd:sum} - sum{break}
-{cmd:p##} - ##th percentile (e.g., p25, p75){break}
-{cmd:iqr} - interquartile range{break}
-{cmd:first}, {cmd:last} - first and last values{break}
-{cmd:firstnm}, {cmd:lastnm} - first and last nonmissing values
+{cmd:sum} - sum of values{break}
+{cmd:p}{it:##} - ##th percentile (e.g., {cmd:p25} for the 25th percentile, {cmd:p75} for the 75th percentile){break}
+{cmd:iqr} - interquartile range (difference between the 75th and 25th percentiles){break}
+{cmd:first} - first observation in group{break}
+{cmd:last} - last observation in group{break}
+{cmd:firstnm} - first nonmissing observation in group{break}
+{cmd:lastnm} - last nonmissing observation in group
 
 {phang}
-{opt format(%fmt)} specifies the {help format:display format} for numeric variables in the output.
-If not specified, the program automatically applies appropriate formatting:
-{cmd:%20.0fc} for integers and {cmd:%20.1fc} for decimal numbers.
+{opt format(%fmt)} specifies the {help format:display format} for all numeric variables containing
+calculated statistics in the output dataset. If not specified, {cmd:dtstat} automatically applies
+{cmd:%20.0fc} for integer statistics like count, and {cmd:%20.1fc} for statistics that may have
+decimal values (e.g., mean, median, percentiles).
 
 {phang}
-{opt nomiss} specifies that observations with missing values in any of the
-analysis variables should be excluded from the sample. By default, observations
-are excluded only if they have missing values in the currently processed variable.
+{opt nomiss} specifies that observations with a missing value in any of the variables listed in
+the main {varlist} (the variables for which statistics are being calculated) or in the {opt by(varlist)}
+should be excluded from all computations. By default, {cmd:dtstat} performs calculations using all
+nonmissing values for each variable or group individually (casewise deletion per statistic per group).
 
 {phang}
-{opt fast} specifies that {cmd:gtools} commands should be used instead of standard
-Stata commands for faster processing. This option requires {cmd:gtools} to be installed.
-Install with: {stata ssc install gtools}, followed by {stata gtools, upgrade}.
+{opt fast} specifies that commands from the {cmd:gtools} package (e.g., {cmd:gcollapse}) should be
+used for computation where possible. This can significantly improve performance with large datasets.
+This option requires the {cmd:gtools} package to be installed. If {cmd:gtools} is not installed,
+{cmd:dtstat} will issue a warning and proceed using standard Stata commands.
+(See {stata "ssc install gtools":ssc install gtools}, {stata "ssc install gcollapse":ssc install gcollapse}).
 
 {dlgtab:Export}
 
 {phang}
-{opt exopt(export_options)} specifies additional options to pass to the {help export_excel##export_excel_options:Excel export} command. 
-These options are passed directly to the {help export_excel:export excel} 
-command. This option can only be used with the {cmd:using} clause. If not specified,
-the default export options are {cmd:sheet("dtstat_output", replace) firstrow(varlabels)}.
+{opt exopt(export_options)} provides a way to pass additional options to the {help export_excel}
+command when {cmd:dtstat} is used with the {cmd:using} qualifier to export results to an Excel file.
+These {it:export_options} are passed directly to {cmd:export excel}. For example, to specify a sheet name
+and replace an existing sheet, one might use {cmd:exopt(sheet("SummaryStats") replace)}.
+If not specified, {cmd:dtstat} uses default export options:
+{cmd:sheet("dtstat_output", replace) firstrow(varlabels)}.
+This option is only valid when {cmd:using} {it:filename} is also specified.
 
 {marker examples}{...}
 {title:Examples}
@@ -163,20 +180,32 @@ the default export options are {cmd:sheet("dtstat_output", replace) firstrow(var
 {title:Stored results}
 
 {pstd}
-{cmd:dtstat} stores the following in the specified frame (default {cmd:_df}):
+{cmd:dtstat} creates an output dataset in the specified {help frame} (default {cmd:_df}). This dataset contains the following variables:
 
-{synoptset 15 tabbed}{...}
-{p2col 5 15 19 2: Variables}{p_end}
-{synopt:{cmd:varname}}variable name (string){p_end}
-{synopt:{cmd:varlab}}variable label (string){p_end}
-{synopt:{cmd:[byvar]}}grouping variables (if {opt by()} specified){p_end}
-{synopt:{cmd:[statistics]}}requested statistics (numeric){p_end}
+{synoptset 20 tabbed}{...}
+{p2col 5 20 24 2: Variable Name}{Description}{p_end}
+{synopt:{cmd:varname}}A string variable containing the names of the variables from the input {varlist} for which statistics were calculated.{p_end}
+{synopt:{cmd:varlab}}A string variable containing the variable labels of the input variables, if present.{p_end}
+{synopt:{it:by_variables}}If the {opt by(varlist)} option is specified, these variables (matching the names and types of those in {it:varlist}) identify the groups for which statistics were computed. For overall total rows, these variables will contain a special value (e.g., -1, or a system missing value if -1 has a defined value label for a {it:by_variable}) and will be labeled "Total" (or with the label for that special value).{p_end}
+{synopt:{it:stat_names}}Variables corresponding to each statistic requested in the {opt stats(statlist)} option (e.g., {cmd:mean}, {cmd:median}, {cmd:sd}). These are numeric variables containing the calculated statistics.{p_end}
+{p2colreset}{...}
 
 {pstd}
-The output dataset contains one observation per variable per group (if {opt by()} is used)
-or one observation per variable (if {opt by()} is not used). When {opt by()} is specified,
-additional rows with value -1 in the grouping variables represent overall totals.
-
+The structure of the output dataset is as follows:
+{p_end}
+{pstd}
+• If {opt by(varlist)} is {ul:not} specified, the dataset contains one observation for each variable in the input {varlist}. Each row represents the summary statistics for one variable.
+{p_end}
+{pstd}
+• If {opt by(varlist)} {ul:is} specified, the dataset contains one observation for each variable in the input {varlist} {it:for each combination} of the values of the {it:by_variables}. Additional observations are included for overall totals across all groups for each variable in the input {varlist}.
+For example, if statistics are calculated for variables {cmd:v1} and {cmd:v2}, and the option {cmd:by(groupvar)} is specified where {cmd:groupvar} has two unique values (A and B), the output dataset will typically have rows for:
+{p_end}
+{phang2}- {cmd:v1} for group A{p_end}
+{phang2}- {cmd:v2} for group A{p_end}
+{phang2}- {cmd:v1} for group B{p_end}
+{phang2}- {cmd:v2} for group B{p_end}
+{phang2}- {cmd:v1} for Total{p_end}
+{phang2}- {cmd:v2} for Total{p_end}
 
 {marker author}{...}
 {title:Author}
