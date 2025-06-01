@@ -16,7 +16,7 @@ program define dtstat
     local varlist `anything'
 
     // Initialize and validate inputs
-    _argcheck, fast(`fast') using(`using') excel(`excel') varlist(`varlist')
+    _argcheck, fast(`fast') save(`save') excel(`excel') varlist(`varlist')
     local collapsecmd "`r(collapsecmd)'"
 
     // * Set defaults
@@ -401,11 +401,11 @@ end
 // * Checks if user inputs are valid before starting
 capture program drop _argcheck
 program define _argcheck, rclass
-    syntax, [fast(string) excel(string) using(string)] varlist(namelist)
+    syntax, [fast(string) excel(string) save(string)] varlist(namelist)
 
     // * Cross-option validation
     // Ensure excel is only present if using is present
-    if "`save'" != "" & "`excel'" == "" {
+    if "`save'" == "" & "`excel'" != "" {
         display as error "excel() option is only allowed when save() is also specified."
         exit 198
     }
@@ -444,7 +444,7 @@ program define _argload, rclass
 
     local _inmemory = c(filename) != "" | c(N) > 0 | c(k) > 0 | c(changed) == 1
     if `_inmemory' == 0 & "`using'" == "" {
-        display as error "No data source for executing dtfreq. Please specify a dataset using the 'using' or load the data into memory."
+        display as error "No data source for executing dtstat. Please specify a dataset using the 'using' or load the data into memory."
         exit 198
     }
 

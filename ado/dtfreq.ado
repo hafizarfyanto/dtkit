@@ -14,7 +14,7 @@ program define dtfreq
     // Now validate the varlist as numeric with loaded data
     local varlist `anything'
 
-    _argcheck `varlist' `if' `in' [`weight'`exp'], df(`df') by(`by') cross(`cross') `binary' format(`format') `miss' using(`using') excel(`excel') stats("`stats'") type("`type'") save(`save')
+    _argcheck `varlist' `if' `in' [`weight'`exp'], df(`df') by(`by') cross(`cross') `binary' format(`format') `miss' using(`using') excel(`excel') stats("`stats'") type("`type'") save(`save') replace(`replace') clear(`clear')
 
     // * Set defaults
     if "`df'" == "" local df "_df"
@@ -554,7 +554,7 @@ capture program drop _argcheck
 program define _argcheck, rclass
     syntax varlist(min=1 numeric) [if] [in] [aweight fweight iweight pweight] ///
            [, df(string) by(varname numeric) cross(varname numeric) BINary ///
-           FOrmat(string) noMISS using(string) excel(string) stats(namelist) type(namelist) ///
+           FOrmat(string) noMISS using(string) stats(namelist) type(namelist) ///
            fullpath(string) filename(string) extension(string) replace(string) excel(string) save(string asis) clear(string)]
 
     // * Validate stats and type options
@@ -610,6 +610,12 @@ program define _argcheck, rclass
     // replace only makes sense together with save
     if "`replace'" != "" & "`save'" == "" {
         display as error "option replace only allowed with save"
+        exit 198
+    }
+
+    // Ensure excel is only present if using is present
+    if "`save'" == "" & "`excel'" != "" {
+        display as error "excel() option is only allowed when save() is also specified."
         exit 198
     }
 
