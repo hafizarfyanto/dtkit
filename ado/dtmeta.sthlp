@@ -31,7 +31,7 @@
 {synopt:{opt c:lear}}clear original data from memory after loading external data{p_end}
 {synopt:{opt rep:lace}}replace existing metadata frames{p_end}
 {synopt:{opt report}}display metadata extraction report{p_end}
-{synopt:{opt excel(string)}}export metadata frames to Excel file{p_end}
+{synopt:{opt save(excelname)}}export metadata frames to Excel file{p_end}
 {synoptline}
 {p2colreset}{...}
 
@@ -69,10 +69,10 @@ Using {cmd:dtmeta} with {cmd:using} without {opt clear} processes the metadata f
 
 {phang}
 {opt replace} allows {cmd:dtmeta} to overwrite an existing Excel file when the
-{cmd:excel()} option is specified. If {cmd:excel()} is specified and an Excel file
+{cmd:save()} option is specified. If {cmd:save()} is specified and an Excel file
 with the same name already exists, {opt replace} is required to overwrite it.
-Without {opt replace}, {cmd:dtmeta} will issue an error if the file exists.
-This option is only valid when {cmd:excel()} is also specified.
+Without {opt replace}, {cmd:dtmeta} will modify if the file exists.
+This option is only valid when {cmd:save()} is also specified.
 
 {phang}
 {opt report} displays a summary report in the Stata console after metadata extraction.
@@ -84,7 +84,7 @@ This report includes:
 {pstd}This option provides immediate feedback on the metadata extraction process.
 
 {phang}
-{opt excel(string)} exports all created metadata frames to an Excel file named {it:string}.
+{opt save(excelname)} exports all created metadata frames to an Excel file named {it:excelname}.
 Each frame is saved as a separate worksheet within the Excel file. The worksheet names will
 correspond to the frame names (e.g., _dtvars, _dtlabel). If the specified Excel file
 already exists, the {opt replace} option must also be used to overwrite it.
@@ -166,7 +166,7 @@ always reflect the current state of the source dataset as of the last execution 
 {ul:{bf:Excel Export}}}
 
 {pstd}
-When the {cmd:excel(filename)} option is specified, {cmd:dtmeta} exports all created
+When the {cmd:save(excelname)} option is specified, {cmd:dtmeta} exports all created
 metadata frames to separate worksheets within the specified Excel file. If an Excel file
 with the same name already exists, the {cmd:replace} option must also be specified to
 overwrite the existing file. Otherwise, an error will occur.
@@ -217,7 +217,7 @@ the data in memory is replaced by the data from the specified file before metada
 
 {pstd}{bf:Export to Excel with file replacement}{p_end}
 
-        {cmd:. dtmeta, excel("dataset_metadata.xlsx") replace}
+        {cmd:. dtmeta, save("dataset_metadata.xlsx") replace}
 
 {pstd}{bf:Work with variable metadata}{p_end}
 
@@ -243,7 +243,7 @@ the data in memory is replaced by the data from the specified file before metada
 
 {pstd}{bf:Comprehensive workflow with external data and export}{p_end}
 
-        {cmd:. dtmeta using "https://www.stata-press.com/data/r18/nlswork.dta", excel("mydata_metadata.xlsx") replace report clear}
+        {cmd:. dtmeta using "https://www.stata-press.com/data/r18/nlswork.dta", save("mydata_metadata.xlsx") replace report clear}
 
 {pstd}{bf:Clear memory after loading external data}{p_end}
 
