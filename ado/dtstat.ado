@@ -4,15 +4,23 @@ program define dtstat
     * Module to produce descriptive statistics dataset
 
     version 16
-    syntax varlist(min=1 numeric) [if] [in] [aweight fweight iweight pweight] [using/] [, df(string) by(varlist) stats(string asis) FOrmat(string) noMISS FAst Exopt(string)]
-    
+    syntax anything(id="varlist") [if] [in] [aweight fweight iweight pweight] [using/] [, df(string) by(varlist) stats(string asis) FOrmat(string) noMISS FAst save(string asis) excel(string)]
+
+    // Validate arguments and get returned parameters
+    _argload, clear(`clear') using(`using')
+    // Define frames
+    local source_frame `r(source_frame)'
+    local _defaultframe `r(_defaultframe)'
+
+    // Now validate the varlist as numeric with loaded data
+    local varlist `anything'
+
     // Initialize and validate inputs
-    _argcheck, fast(`fast') using(`using') exopt(`exopt')
+    _argcheck, fast(`fast') save(`save') excel(`excel') varlist(`varlist')
     local collapsecmd "`r(collapsecmd)'"
 
     // * Set defaults
     if "`df'" == "" local df "_df"
-    local source_frame = c(frame)
     capture frame drop `df'
     frame create `df'
     tempname temp_frame
@@ -45,15 +53,15 @@ program define dtstat
     _format, by(`by') format(`format') df(`df')    
 
     // export to excel
-    if "`using'" != "" {
-        local inputfile = subinstr(`"`using'"', `"""', "", .)
+    if "`save'" != "" {
+        local inputfile = subinstr(`"`save'"', `"""', "", .)
         if ustrregexm("`inputfile'", "^(.*[/\\])?([^/\\]+?)(\.[^./\\]+)?$") {
             local fullpath = ustrregexs(1)
             local filename = ustrregexs(2)
             local extension = ustrregexs(3)
             local fullname = "`fullpath'`filename'`extension'"
         }
-        frame `df': _toexcel, fullname(`fullname') exopt(`exopt')
+        frame `df': _toexcel, fullname(`fullname') excel(`excel')
     }
 end
 
@@ -271,16 +279,22 @@ program define _formatvars
             if "`report'" != "" display "Variable `var': Skipping date-time format (`current_fmt')"
             continue
         }
-        
+
+        * Check if variable has value labels - if yes, just add negative sign and continue
+        local vallbl : value label `var'
+        if "`vallbl'" != "" {
+            local current_format : format `var'
+            local new_format : subinstr local current_format "%" "%-"
+            format `var' `new_format'
+            if "`report'" != "" display "Variable `var': Has value labels, applying left-justification (`new_format')"
+            continue
+        }
+
         * Get summary statistics
         quietly summarize `var', meanonly
         local max_val = r(max)
         local min_val = r(min)
-        
-        * Check if variable has value labels
-        local vallbl : value label `var'
-        local left_just = ("`vallbl'" != "")
-        
+                
         * Check if variable has decimal parts
         capture assert `var' == round(`var') if !missing(`var')
         local has_decimals = (_rc == 9)
@@ -367,15 +381,15 @@ end
 capture program drop _toexcel
 program define _toexcel
 
-    syntax, [fullname(string) exopt(string)]
+    syntax, [fullname(string) excel(string)]
 
     if "`fullname'" != "" {
         // Set export options
-        if `"`exopt'"' == "" {
+        if `"`excel'"' == "" {
             local exportcmd `"`fullname', sheet("dtstat_output", replace) firstrow(varlabels)"'
         }
         else {
-            local exportcmd `"`fullname', `exopt'"'
+            local exportcmd `"`fullname', `excel'"'
         }
         
         // Perform export with error handling
@@ -387,12 +401,12 @@ end
 // * Checks if user inputs are valid before starting
 capture program drop _argcheck
 program define _argcheck, rclass
-    syntax, [fast(string) Exopt(string) using(string)]
+    syntax, [fast(string) excel(string) save(string)] varlist(namelist)
 
     // * Cross-option validation
-    // Ensure exopt is only present if using is present
-    if "`exopt'" != "" & "`using'" == "" {
-        display as error "exopt() option is only allowed when using() is also specified."
+    // Ensure excel is only present if using is present
+    if "`save'" == "" & "`excel'" != "" {
+        display as error "excel() option is only allowed when save() is also specified."
         exit 198
     }
         
@@ -410,5 +424,45 @@ program define _argcheck, rclass
     else {
         return local collapsecmd "collapse"
     }
-    
+
+    foreach var of local varlist {
+        if "`var'" != "" {
+            capture confirm numeric variable `var'
+            if _rc {
+                di as error "Variable `var' not numeric"
+                exit 111
+            }
+        }
+    }
+
+end
+
+// * Determines the data source
+capture program drop _argload
+program define _argload, rclass
+    syntax, [using(string) clear(string)]
+
+    local _inmemory = c(filename) != "" | c(N) > 0 | c(k) > 0 | c(changed) == 1
+    if `_inmemory' == 0 & "`using'" == "" {
+        display as error "No data source for executing dtstat. Please specify a dataset using the 'using' or load the data into memory."
+        exit 198
+    }
+
+    // define dataset
+    if "`using'" != "" {
+        if `_inmemory' == 1 & "`clear'" == "" {
+            return local _defaultframe = c(frame)
+            capture frame drop _dtsource
+            frame create _dtsource
+            cwf _dtsource
+            return local source_frame "_dtsource"
+            quietly use `"`using'"', clear
+        }
+        else {
+            quietly use `"`using'"', clear
+            return local source_frame = c(frame)
+        }
+    }
+    else if "`using'" == "" & `_inmemory' == 1 return local source_frame = c(frame)
+
 end

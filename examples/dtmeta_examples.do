@@ -13,7 +13,7 @@
 
 // Export to Excel with file replacement
 
-        dtmeta, excel("dataset_metadata.xlsx") replace
+        dtmeta, save("dataset_metadata.xlsx") replace
 
 // Work with variable metadata
 
@@ -39,7 +39,7 @@
 
 // Comprehensive workflow with external data and export
 
-        dtmeta using "https://www.stata-press.com/data/r18/nlswork.dta", excel("mydata_metadata.xlsx") replace report clear
+        dtmeta using "https://www.stata-press.com/data/r18/nlswork.dta", save("mydata_metadata.xlsx") replace report clear
 
 // Clear memory after loading external data
 
