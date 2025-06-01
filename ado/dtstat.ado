@@ -279,16 +279,22 @@ program define _formatvars
             if "`report'" != "" display "Variable `var': Skipping date-time format (`current_fmt')"
             continue
         }
-        
+
+        * Check if variable has value labels - if yes, just add negative sign and continue
+        local vallbl : value label `var'
+        if "`vallbl'" != "" {
+            local current_format : format `var'
+            local new_format : subinstr local current_format "%" "%-"
+            format `var' `new_format'
+            if "`report'" != "" display "Variable `var': Has value labels, applying left-justification (`new_format')"
+            continue
+        }
+
         * Get summary statistics
         quietly summarize `var', meanonly
         local max_val = r(max)
         local min_val = r(min)
-        
-        * Check if variable has value labels
-        local vallbl : value label `var'
-        local left_just = ("`vallbl'" != "")
-        
+                
         * Check if variable has decimal parts
         capture assert `var' == round(`var') if !missing(`var')
         local has_decimals = (_rc == 9)
