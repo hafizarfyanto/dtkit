@@ -405,7 +405,7 @@ program define _argcheck, rclass
 
     // * Cross-option validation
     // Ensure excel is only present if using is present
-    if "`save'" != "" & "`excel'" == "" {
+    if "`excel'" != "" & "`save'" == "" {
         display as error "excel() option is only allowed when save() is also specified."
         exit 198
     }
