@@ -14,21 +14,6 @@ program define dtfreq
     // Now validate the varlist as numeric with loaded data
     local varlist `anything'
 
-    // Validate all variables (varlist, by, cross) in one loop
-    local all_vars "`varlist' `by' `cross'"
-    foreach var of local all_vars {
-        if "`var'" != "" {
-            capture confirm numeric variable `var'
-            if _rc {
-                // Determine variable type for better error message
-                local var_type = cond(`: list var in varlist', "Variable", ///
-                            cond("`var'" == "`by'", "by() variable", "cross() variable"))
-                di as error "`var_type' `var' not found or not numeric"
-                exit 111
-            }
-        }
-    }
-
     _argcheck `varlist' `if' `in' [`weight'`exp'], df(`df') by(`by') cross(`cross') `binary' format(`format') `miss' using(`using') excel(`excel') stats("`stats'") type("`type'") save(`save')
 
     // * Set defaults
