@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 2.1.0  29may2025}{...}
+{* *! version 2.1.1  02June2025}{...}
 {vieweralsosee "[R] summarize" "help summarize"}{...}
 {vieweralsosee "[R] collapse" "help collapse"}{...}
 {vieweralsosee "[R] tabstat" "help tabstat"}{...}
@@ -39,8 +39,9 @@
 {synopt:{opt fast}}use {cmd:gtools} commands for faster processing{p_end}
 
 {syntab:Export}
-{synopt:{opt save(filename)}}export results to Excel file{p_end}
+{synopt:{opt save(excelname)}}export results to Excel file{p_end}
 {synopt:{opt excel(export_options)}}specify additional options for Excel export{p_end}
+{synopt:{opt rep:lace}}specify that {it:excelname} should be replaced if it already exists{p_end}
 {synoptline}
 {p2colreset}{...}
 {p 4 6 2}
@@ -131,18 +132,21 @@ This option requires the {cmd:gtools} package to be installed. If {cmd:gtools} i
 {dlgtab:Export}
 
 {phang}
-{opt save(filename)} exports the results to an Excel file named {it:filename}.
+{opt save(excelname)} exports the results to an Excel file named {it:filename}.
 When {cmd:save()} is specified, the statistics frame is exported to the Excel file.
 If not specified, results are only stored in the Stata frame.
 
 {phang}
 {opt excel(export_options)} provides a way to pass additional options to the {help export_excel}
 command when {cmd:dtstat} is used with the {cmd:save()} option to export results to an Excel file.
-These {it:export_options} are passed directly to {cmd:export excel}. For example, to specify a sheet name
-and replace an existing sheet, one might use {cmd:excel(sheet("SummaryStats") replace)}.
+These {it:export_options} are passed directly to {cmd:export excel}. There is no need to wrap {it:export_excel_options} in double quotes. For example, to specify a sheet name
+and replace an existing sheet, one might use {cmd:excel(sheet("SummaryStats"), replace)}.
 If not specified, {cmd:dtstat} uses default export options:
-{cmd:sheet("dtstat_output", replace) firstrow(varlabels)}.
-This option is only valid when {cmd:save()} {it:filename} is also specified.
+{cmd:sheet("dtstat_output", modify) firstrow(varlabels)}.
+This option is only valid when {cmd:save()} {it:excelname} is also specified.
+
+{phang}
+{opt replace} specifies that if the specified sheet in {it:excelname} file already exists, it should be replaced.
 
 {marker examples}{...}
 {title:Examples}
@@ -221,7 +225,7 @@ For example, if statistics are calculated for variables {cmd:v1} and {cmd:v2}, a
 {pstd}GitHub: {browse "https://github.com/hafizarfyanto/dtkit":https://github.com/hafizarfyanto/dtkit}{p_end}
 
 {pstd}
-Program Version: {bf:2.1.0} (29 May 2025)
+Program Version: {bf:2.1.1} (02 June 2025)
 
 {title:Dependencies}
 

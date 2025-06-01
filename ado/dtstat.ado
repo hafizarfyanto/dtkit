@@ -1,10 +1,10 @@
 capture program drop dtstat
 program define dtstat
-    *! Version 2.1.0 Hafiz 29May2025
+    *! Version 2.1.1 Hafiz 02June2025
     * Module to produce descriptive statistics dataset
 
     version 16
-    syntax anything(id="varlist") [if] [in] [aweight fweight iweight pweight] [using/] [, df(string) by(varlist) stats(string asis) FOrmat(string) noMISS FAst save(string asis) excel(string)]
+    syntax anything(id="varlist") [if] [in] [aweight fweight iweight pweight] [using/] [, df(string) by(varlist) stats(string asis) FOrmat(string) noMISS FAst save(string asis) excel(string) REPlace]
 
     // Validate arguments and get returned parameters
     _argload, clear(`clear') using(`using')
@@ -61,7 +61,7 @@ program define dtstat
             local extension = ustrregexs(3)
             local fullname = "`fullpath'`filename'`extension'"
         }
-        frame `df': _toexcel, fullname(`fullname') excel(`excel')
+        frame `df': _toexcel, fullname(`fullname') excel(`excel') replace(`replace')
     }
 end
 
@@ -103,15 +103,6 @@ program define _stats, rclass
     return local total_id "`total_id'"
     return local stats_list "`stats'"
     
-    // // Parse the requested statistics into a format suitable for collapse
-    // local collapse_stats "" // Initialize empty local for collapse syntax parts
-    // foreach stat of local stats {
-    //     // Basic validation: check if stat name looks reasonable (can be expanded)
-    //     local collapse_stats `"`collapse_stats' (`stat') `stat'"' // Building the stat part for collapse command
-    // }
-    // // Trim leading space and finalize quotes
-    // local collapse_stats = strtrim(`"`collapse_stats'"')
-    // return local collapse_stats "`collapse_stats'"
 end
 
 // * main collapse loop
@@ -305,12 +296,7 @@ program define _formatvars
         * Rule 2: Proportions (0 to 1 range) - 3 decimal places
         if `max_val' <= 1 & `min_val' >= 0 {
             local width = 5 + 2  // "0.123" = 5 characters + 2 buffer
-            if `left_just' {
-                local format_str "%-`width'.3f"
-            }
-            else {
-                local format_str "%`width'.3f"
-            }
+            local format_str "%`width'.3f"
             if "`report'" != "" display "Variable `var': Detected as proportion, using format `format_str'"
         }
         
@@ -323,23 +309,13 @@ program define _formatvars
             if `has_decimals' {
                 * Rule 1 + 3: Large numbers with decimals (1 decimal place + comma)
                 local width = `max_digits' + `commas' + 2 + 2  // +2 for ".X", +2 buffer
-                if `left_just' {
-                    local format_str "%-`width'.1fc"
-                }
-                else {
-                    local format_str "%`width'.1fc"
-                }
+                local format_str "%`width'.1fc"
                 if "`report'" != "" display "Variable `var': Large number with decimals, using format `format_str'"
             }
             else {
                 * Rule 1: Large integers (no decimal places + comma)
                 local width = `max_digits' + `commas' + 2  // +2 buffer
-                if `left_just' {
-                    local format_str "%-`width'.0fc"
-                }
-                else {
-                    local format_str "%`width'.0fc"
-                }
+                local format_str "%`width'.0fc"
                 if "`report'" != "" display "Variable `var': Large integer, using format `format_str'"
             }
         }
@@ -351,23 +327,13 @@ program define _formatvars
             if `has_decimals' {
                 * Small numbers with decimals (1 decimal place, no comma)
                 local width = `max_digits' + 2 + 2  // +2 for ".X", +2 buffer
-                if `left_just' {
-                    local format_str "%-`width'.1f"
-                }
-                else {
-                    local format_str "%`width'.1f"
-                }
+                local format_str "%`width'.1f"
                 if "`report'" != "" display "Variable `var': Small number with decimals, using format `format_str'"
             }
             else {
                 * Small integers (no decimal places, no comma)
                 local width = `max_digits' + 2  // +2 buffer
-                if `left_just' {
-                    local format_str "%-`width'.0f"
-                }
-                else {
-                    local format_str "%`width'.0f"
-                }
+                local format_str "%`width'.0f"
                 if "`report'" != "" display "Variable `var': Small integer, using format `format_str'"
             }
         }
@@ -381,12 +347,13 @@ end
 capture program drop _toexcel
 program define _toexcel
 
-    syntax, [fullname(string) excel(string)]
+    syntax, [fullname(string) excel(string) replace(string)]
 
     if "`fullname'" != "" {
         // Set export options
         if `"`excel'"' == "" {
-            local exportcmd `"`fullname', sheet("dtstat_output", replace) firstrow(varlabels)"'
+            if "`replace'" != "" local exportcmd `"`fullname', sheet("dtstat_output", replace) firstrow(varlabels)"'
+            else local exportcmd `"`fullname', sheet("dtstat_output", modify) firstrow(varlabels)"'
         }
         else {
             local exportcmd `"`fullname', `excel'"'
@@ -409,7 +376,13 @@ program define _argcheck, rclass
         display as error "excel() option is only allowed when save() is also specified."
         exit 198
     }
-        
+
+    // replace only makes sense together with save
+    if "`replace'" != "" & "`save'" == "" {
+        display as error "option replace only allowed with save"
+        exit 198
+    }
+
     // Check dependencies and set collapse command
     if "`fast'" != "" {
         capture which gtools
