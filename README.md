@@ -6,7 +6,6 @@
 ![Version](https://img.shields.io/badge/Version-2.1.0-green)
 ![Stata 16+](https://img.shields.io/badge/Stata-16%2B-purple)
 ![GitHub Downloads](https://img.shields.io/github/downloads/hafizarfyanto/dtkit/total)
-![GitHub Clones](https://img.shields.io/github/clones/hafizarfyanto/dtkit?color=brightgreen)
 ![GitHub Stars](https://img.shields.io/github/stars/hafizarfyanto/dtkit?style=social)
 
 `dtkit` is a Stata package that transforms data exploration by creating **structured datasets** instead of display-only results. It uses Stata's frame system to deliver improved statistics, frequency analysis, and dataset information.
