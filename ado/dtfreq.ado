@@ -654,7 +654,9 @@ program define _argcheck, rclass
                         label define `tmplbl' `val' "`lbltxt'", add
                     }
                     label values `var' `tmplbl'
-                    di as text "Temporary label applied: `var'"
+                    if "`debug'" == "1" {
+                        di as text "Temporary label applied: `var'"
+                    }
                 }
             }
 
