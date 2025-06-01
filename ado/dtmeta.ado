@@ -38,7 +38,7 @@ program define dtmeta, rclass
     return add
 
     // export to save
-    if `"`save'"' != "" _tosave, save(`save')
+    if `"`save'"' != "" _toexcel, save(`save')
     if "`_defaultframe'" != "" cwf `_defaultframe'
     return local source_frame `source_frame'
 
@@ -227,8 +227,8 @@ program define _labelframes
 end
 
 // * Saves the final table to Excel file
-capture program drop _tosave
-program define _tosave
+capture program drop _toexcel
+program define _toexcel
 
     syntax, [save(string asis) replace(string)]
 
