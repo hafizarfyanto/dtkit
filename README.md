@@ -1,8 +1,13 @@
 # dtkit: Data Toolkit for Stata
 
+# dtkit: Data Toolkit for Stata
+
 [![Stata Package](https://img.shields.io/badge/Stata-ado-blue)](https://github.com/hafizarfyanto/dtkit)
 ![Version](https://img.shields.io/badge/Version-2.1.0-green)
 ![Stata 16+](https://img.shields.io/badge/Stata-16%2B-purple)
+![GitHub Downloads](https://img.shields.io/github/downloads/hafizarfyanto/dtkit/total)
+![GitHub Clones](https://img.shields.io/github/clones/hafizarfyanto/dtkit?color=brightgreen)
+![GitHub Stars](https://img.shields.io/github/stars/hafizarfyanto/dtkit?style=social)
 
 `dtkit` is a Stata package that transforms data exploration by creating **structured datasets** instead of display-only results. It uses Stata's frame system to deliver improved statistics, frequency analysis, and dataset information.
 
@@ -19,14 +24,14 @@
 Install `dtkit` directly from GitHub using Stata's `net install` command:
 
 ```stata
-net install dtkit, from("https://raw.githubusercontent.com/hafizarfyanto/dtkit/main/")
+net install dtkit, replace from("https://raw.githubusercontent.com/hafizarfyanto/dtkit/main/")
 ```
 
 ## Updating to Latest Version
 To ensure you have the most recent features and bug fixes:
 
 ```stata
-net install dtkit, replace from("https://raw.githubusercontent.com/hafizarfyanto/dtkit/main/")
+net install dtkit, replace force from("https://raw.githubusercontent.com/hafizarfyanto/dtkit/main/")
 ```
 
 ## Uninstalling
@@ -35,6 +40,16 @@ If you need to remove the package:
 ```stata
 ado uninstall dtkit
 ```
+
+### Alternative Uninstall Method
+If the standard uninstall method doesn't work (e.g., if dtkit was installed multiple times), you can use:
+
+```stata
+ado dir dtkit
+ado uninstall [pkgid]
+```
+
+Where `[pkgid]` is the index number shown by `ado dir dtkit`. This method is useful when you have accidentally installed dtkit multiple times or need to remove a specific installation.
 
 ## Commands Overview
 
