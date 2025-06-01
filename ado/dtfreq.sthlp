@@ -44,7 +44,8 @@
 {synopt:{opt nomiss}}exclude missing values from analysis{p_end}
 
 {syntab:Export}
-{synopt:{opt exopt(export_options)}}additional options for Excel export{p_end}
+{synopt:{opt save(filename)}}export results to Excel file{p_end}
+{synopt:{opt excel(export_options)}}additional options for Excel export{p_end}
 {synoptline}
 {p2colreset}{...}
 {p 4 6 2}
@@ -132,9 +133,14 @@ Specifying {opt nomiss} ensures that proportions and percentages are calculated 
 {dlgtab:Export}
 
 {phang}
-{opt exopt(export_options)} specifies additional options for {help export_excel##export_excel_options:Excel export} when using the 
-{cmd:using} qualifier. These options are passed directly to the {help export_excel:export excel} 
-command. Can only be used with {cmd:using}.
+{opt save(filename)} exports the results to an Excel file named {it:filename}.
+When {cmd:save()} is specified, the frequency table frame is exported to the Excel file.
+If not specified, results are only stored in the Stata frame.
+
+{phang}
+{opt excel(export_options)} specifies additional options for {help export_excel##export_excel_options:Excel export} when using the 
+{cmd:save()} option. These options are passed directly to the {help export_excel:export excel} 
+command. Can only be used with {cmd:save()}.
 
 {marker examples}{...}
 {title:Examples}

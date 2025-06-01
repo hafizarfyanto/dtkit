@@ -63,7 +63,7 @@ Main options: {opt df(framename)} specifies the output frame name; {opt by(varli
 {opt stats(statlist)} specifies statistics to calculate (default: {cmd:count mean median min max});
 {opt format(%fmt)} sets the display format for statistic variables;
 {opt nomiss} excludes observations with missing values; {opt fast} uses {cmd:gtools} for faster processing;
-and {opt exopt(export_options)} passes options to {cmd:export excel}.
+{opt save(filename)} exports results to Excel file; and {opt excel(export_options)} specifies additional options for Excel export.
 
 {dlgtab:Frequency Analysis}
 
@@ -82,7 +82,7 @@ Main options: {opt df(framename)} specifies the output frame name; {opt by(varna
 {opt stats(statlist)} specifies direction for statistics (row, col, cell);
 {opt type(typelist)} sets statistic type (prop, pct);
 {opt format(%fmt)} sets display format; {opt nomiss} excludes missing values from analysis;
-and {opt exopt(export_options)} passes options to {cmd:export excel}.
+{opt save(filename)} exports results to Excel file; and {opt excel(export_options)} specifies additional options for Excel export.
 
 {dlgtab:Dataset Metadata}
 
@@ -98,7 +98,7 @@ Processes data in memory or from external Stata {cmd:.dta} files.
 {pmore}
 Main options: {opt clear} drops current data in memory when loading from an external file;
 {opt replace} allows overwriting an existing Excel export file; {opt report} displays a metadata extraction summary;
-and {opt excel(excelname)} exports metadata frames to a specified Excel file.
+and {opt save(filename)} exports metadata frames to a specified Excel file.
 
 {marker examples}{...}
 {title:Examples}
@@ -109,16 +109,16 @@ and {opt excel(excelname)} exports metadata frames to a specified Excel file.
 {pstd}{cmd:dtstat} - Enhanced descriptive statistics{p_end}
 {p 8 4 2}{stata dtstat price mpg weight}{p_end}
 {p 8 4 2}{stata dtstat price mpg, by(foreign) stats(count mean sd)}{p_end}
-{p 8 4 2}{stata dtstat age grade using "output", df(summary) format(%8.2f)}{p_end}
+{p 8 4 2}{stata dtstat price mpg, df(summary) save("summary.xlsx") format(%8.2f)}{p_end}
 
 {pstd}{cmd:dtfreq} - Comprehensive frequency analysis{p_end}
 {p 8 4 2}{stata dtfreq foreign}{p_end}
 {p 8 4 2}{stata dtfreq rep78, by(foreign) cross(gear_ratio > 3) type(pct)}{p_end}
-{p 8 4 2}{stata dtfreq foreign, binary cross(rep78) stats(row col) type(prop pct)}{p_end}
+{p 8 4 2}{stata dtfreq foreign, binary cross(rep78) stats(row col) type(prop pct) save("freq.xlsx")}{p_end}
 
 {pstd}{cmd:dtmeta} - Dataset metadata extraction{p_end}
 {p 8 4 2}{stata dtmeta, report}{p_end}
-{p 8 4 2}{stata dtmeta using "nlsw88.dta", excel("metadata.xlsx") replace clear}{p_end}
+{p 8 4 2}{stata dtmeta using "nlsw88.dta", save("metadata.xlsx") replace clear}{p_end}
 
 {pstd}Combined workflow example{p_end}
 {p 8 4 2}{stata sysuse nlsw88, clear}{p_end}
@@ -142,7 +142,7 @@ for exporting these frames to Excel.
 Key features of the {opt dtkit} commands include:
 
 {p 8 12 2}• Output datasets stored in {help frame:frames}, allowing for further manipulation, merging, or analysis.{p_end}
-{p 8 12 2}• Capability to export results to Excel files, with options for customization via {cmd:export excel} sub-options.{p_end}
+{p 8 12 2}• Capability to export results to Excel files, with options for customization via the {opt save()} and {opt excel()} options.{p_end}
 {p 8 12 2}• Automatic application of appropriate display formats and preservation of value labels in output datasets.{p_end}
 {p 8 12 2}• Support for all Stata {help weight:weight} types.{p_end}
 {p 8 12 2}• Optional integration with the {cmd:gtools} package for improved performance with large datasets, particularly in {cmd:dtstat} via the {opt fast} option.{p_end}

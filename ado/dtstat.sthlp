@@ -39,7 +39,8 @@
 {synopt:{opt fast}}use {cmd:gtools} commands for faster processing{p_end}
 
 {syntab:Export}
-{synopt:{opt exopt(export_options)}}specify additional options for Excel export{p_end}
+{synopt:{opt save(filename)}}export results to Excel file{p_end}
+{synopt:{opt excel(export_options)}}specify additional options for Excel export{p_end}
 {synoptline}
 {p2colreset}{...}
 {p 4 6 2}
@@ -52,7 +53,7 @@ see {help weight}.
 {pstd}
 {cmd:dtstat} creates a dataset containing descriptive statistics for the specified numeric {varlist}.
 The results are stored in a Stata {help frame}, which can optionally be exported to an Excel file
-using the {cmd:using} qualifier. Unlike {help summarize} or {help tabstat}, which primarily display
+using the {cmd:save()} option. Unlike {help summarize} or {help tabstat}, which primarily display
 results, {cmd:dtstat} produces a new dataset (frame). This output dataset can be further
 manipulated, merged with other datasets, or exported, making it suitable for reporting and complex data workflows.
 
@@ -130,13 +131,18 @@ This option requires the {cmd:gtools} package to be installed. If {cmd:gtools} i
 {dlgtab:Export}
 
 {phang}
-{opt exopt(export_options)} provides a way to pass additional options to the {help export_excel}
-command when {cmd:dtstat} is used with the {cmd:using} qualifier to export results to an Excel file.
+{opt save(filename)} exports the results to an Excel file named {it:filename}.
+When {cmd:save()} is specified, the statistics frame is exported to the Excel file.
+If not specified, results are only stored in the Stata frame.
+
+{phang}
+{opt excel(export_options)} provides a way to pass additional options to the {help export_excel}
+command when {cmd:dtstat} is used with the {cmd:save()} option to export results to an Excel file.
 These {it:export_options} are passed directly to {cmd:export excel}. For example, to specify a sheet name
-and replace an existing sheet, one might use {cmd:exopt(sheet("SummaryStats") replace)}.
+and replace an existing sheet, one might use {cmd:excel(sheet("SummaryStats") replace)}.
 If not specified, {cmd:dtstat} uses default export options:
 {cmd:sheet("dtstat_output", replace) firstrow(varlabels)}.
-This option is only valid when {cmd:using} {it:filename} is also specified.
+This option is only valid when {cmd:save()} {it:filename} is also specified.
 
 {marker examples}{...}
 {title:Examples}
@@ -168,12 +174,12 @@ This option is only valid when {cmd:using} {it:filename} is also specified.
 
 {pstd}5. One-way descriptive statistics for {cmd:age} and {cmd:grade}, results in frame {cmd:_df}, export to excel:{p_end}
 
-        {cmd:. frame nlsw88: dtstat age grade using "examples/_df"}
+        {cmd:. frame nlsw88: dtstat age grade, save("examples/_df.xlsx")}
         {cmd:. frame _df: list, clean noobs}
 
 {pstd}6. Descriptive statistics (default) for {cmd:age} and {cmd:grade} stratified by {cmd:married}, results in frame {cmd:df2}, export to excel:{p_end}
 
-        {cmd:. frame nlsw88: dtstat age grade using "examples/df2", df(df2) by(married) exopt(sheet("sum", modify))}
+        {cmd:. frame nlsw88: dtstat age grade, df(df2) by(married) save("examples/df2.xlsx") excel(sheet("sum", modify))}
         {cmd:. frame df2: list, noobs sepby(married)}
 
 {marker results}{...}

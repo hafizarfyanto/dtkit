@@ -31,5 +31,5 @@
 
 // 6. Descriptive statistics (default) for {cmd:age} and {cmd:grade} stratified by {cmd:married}, results in frame {cmd:df2}, export to excel:
 
-        . frame nlsw88: dtstat age grade using "examples/df2", df(df2) by(married) exopt(sheet("sum", modify))
+        . frame nlsw88: dtstat age grade, df(df2) by(married) save("examples/df2.xlsx") excel(sheet("sum", modify))
         . frame df2: list, noobs sepby(married)

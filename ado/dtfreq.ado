@@ -1,18 +1,27 @@
 capture program drop dtfreq
 program define dtfreq
-    *! Version 2.1.0 Hafiz 29May2025
+    *! Version 2.2.0 Hafiz 01Jun2025
     * Module to produce frequency dataset
     version 16
-    syntax varlist(min=1 numeric) [if] [in] [aweight fweight iweight pweight] [using/] [, df(string) by(varname numeric) cross(varname numeric) BINary FOrmat(string) noMISS Exopt(string) STATs(namelist max=3) TYpe(namelist max=2)]
+    syntax anything(id="varlist") [if] [in] [aweight fweight iweight pweight] [using/] [, df(string) by(varname numeric) cross(varname numeric) BINary FOrmat(string) noMISS save(string asis) excel(string) STATs(namelist max=3) TYpe(namelist max=2) Clear REPlace]
 
     // Validate arguments and get returned parameters
-    _argcheck `varlist' `if' `in' [`weight'`exp'], df(`df') by(`by') cross(`cross') `binary' format(`format') `miss' using(`using') exopt(`exopt') stats("`stats'") type("`type'")
-    
+    _argload, clear(`clear') using(`using')
+    // Define frames
+    local source_frame `r(source_frame)'
+    local _defaultframe `r(_defaultframe)'
+
+    // Now validate the varlist as numeric with loaded data
+    local varlist `anything'
+
+    _argcheck `varlist' `if' `in' [`weight'`exp'], df(`df') by(`by') cross(`cross') `binary' format(`format') `miss' using(`using') excel(`excel') stats("`stats'") type("`type'") save(`save') replace(`replace') clear(`clear')
+
     // * Set defaults
     if "`df'" == "" local df "_df"
     if "`stats'" == "" local stats "col"
     if "`type'" == "" local type "prop"
-    local source_frame = c(frame)
+
+
     capture frame drop `df'
     frame create `df'
     tempname temp_frame
@@ -61,20 +70,20 @@ program define dtfreq
     if strpos("`type'", "prop") == 0 frame `df': capture drop *prop*
     if strpos("`type'", "pct") == 0 frame `df': capture drop *pct*
 
-    // sort results
-    frame `df': sort `by' varname *prop*
+    // sort results (freq always exists)
+    frame `df': sort `by' varname freq*
 
 
     // export to excel
-    if "`using'" != "" {
-        local inputfile = subinstr(`"`using'"', `"""', "", .)
+    if "`save'" != "" {
+        local inputfile = subinstr(`"`save'"', `"""', "", .)
         if ustrregexm("`inputfile'", "^(.*[/\\])?([^/\\]+?)(\.[^./\\]+)?$") {
             local fullpath = ustrregexs(1)
             local filename = ustrregexs(2)
             local extension = ustrregexs(3)
             local fullname = "`fullpath'`filename'`extension'"
         }
-        frame `df': _toexcel, fullname(`fullname') exopt(`exopt')
+        frame `df': _toexcel, fullname(`fullname') excel(`excel')
     }
 
 end
@@ -405,15 +414,15 @@ end
 capture program drop _toexcel
 program define _toexcel
 
-    syntax, [fullname(string) exopt(string)]
+    syntax, [fullname(string) excel(string)]
 
     if "`fullname'" != "" {
         // Set export options
-        if `"`exopt'"' == "" {
+        if `"`excel'"' == "" {
             local exportcmd `"`fullname', sheet("dtfreq_output", replace) firstrow(varlabels)"'
         }
         else {
-            local exportcmd `"`fullname', `exopt'"'
+            local exportcmd `"`fullname', `excel'"'
         }
         
         // Perform export with error handling
@@ -443,15 +452,21 @@ program define _formatvars
             continue
         }
         
+        * Check if variable has value labels - if yes, just add negative sign and continue
+        local vallbl : value label `var'
+        if "`vallbl'" != "" {
+            local current_format : format `var'
+            local new_format : subinstr local current_format "%" "%-"
+            format `var' `new_format'
+            if "`report'" != "" display "Variable `var': Has value labels, applying left-justification (`new_format')"
+            continue
+        }
+        
         * Get summary statistics
         quietly summarize `var', meanonly
         local max_val = r(max)
         local min_val = r(min)
-        
-        * Check if variable has value labels
-        local vallbl : value label `var'
-        local left_just = ("`vallbl'" != "")
-        
+                
         * Check if variable has decimal parts
         capture assert `var' == round(`var') if !missing(`var')
         local has_decimals = (_rc == 9)
@@ -539,8 +554,8 @@ capture program drop _argcheck
 program define _argcheck, rclass
     syntax varlist(min=1 numeric) [if] [in] [aweight fweight iweight pweight] ///
            [, df(string) by(varname numeric) cross(varname numeric) BINary ///
-           FOrmat(string) noMISS using(string) exopt(string) stats(namelist) type(namelist) ///
-           fullpath(string) filename(string) extension(string)]
+           FOrmat(string) noMISS using(string) stats(namelist) type(namelist) ///
+           fullpath(string) filename(string) extension(string) replace(string) excel(string) save(string asis) clear(string)]
 
     // * Validate stats and type options
     if "`stats'" != "" {
@@ -549,8 +564,17 @@ program define _argcheck, rclass
             display as error "Option stats() must be unique. Duplicates found: " as result "`dupstats'" as error " in " as result "stats(`stats')" as error "."
             exit 198
         }
-        if !regexm("`stats'", "^\s*(row|col|cell)([ ]+(row|col|cell)){0,2}\s*$") {
-            display as error "Option stats() must be up to three of row, col, or cell. Entered stats: " as result "`stats'"
+        // Check if all elements are valid
+        local valid_stats "row col cell"
+        local invalid_stats: list stats - valid_stats
+        if "`invalid_stats'" != "" {
+            display as error "Invalid stats option(s): " as result "`invalid_stats'" as error ". Valid options are: row, col, or cell (without commas)."
+            exit 198
+        }
+        // Check maximum of 3 elements
+        local stats_count: word count `stats'
+        if `stats_count' > 3 {
+            display as error "Option stats() allows maximum 3 values. You specified `stats_count': " as result "`stats'"
             exit 198
         }
     }
@@ -560,16 +584,38 @@ program define _argcheck, rclass
             display as error "Option type() must be unique. Duplicates found: " as result "`duptype'" as error " in " as result "type(`type')" as error "."
             exit 198
         }
-        if !regexm("`type'",  "^\s*(prop|pct)([ ]+(prop|pct)){0,1}\s*$") {
-            display as error "Option type() must be up to two of prop or pct. Entered type: " as result "`type'"
+        // Check if all elements are valid
+        local valid_types "prop pct"
+        local invalid_types: list type - valid_types
+        if "`invalid_types'" != "" {
+            display as error "Invalid type option(s): " as result "`invalid_types'" as error ". Valid options are: prop, pct"
+            exit 198
+        }
+        
+        // Check maximum of 2 elements
+        local type_count: word count `type'
+        if `type_count' > 2 {
+            display as error "Option type() allows maximum 2 values. You specified `type_count': " as result "`type'"
             exit 198
         }
     }
 
     // * Cross-option validation
-    // Ensure exopt is only present if using is present
-    if "`exopt'" != "" & "`using'" == "" {
-        display as error "exopt() option is only allowed when using() is also specified."
+    // clear only makes sense together with using
+    if "`clear'" != "" & "`using'" == "" {
+        display as error "option clear only allowed with using"
+        exit 198
+    }
+
+    // replace only makes sense together with save
+    if "`replace'" != "" & "`save'" == "" {
+        display as error "option replace only allowed with save"
+        exit 198
+    }
+
+    // Ensure excel is only present if using is present
+    if "`save'" == "" & "`excel'" != "" {
+        display as error "excel() option is only allowed when save() is also specified."
         exit 198
     }
 
@@ -596,11 +642,29 @@ program define _argcheck, rclass
         tempname _chklbl
         frame put `varlist', into(`_chklbl')
         frame `_chklbl' {
+            foreach var of local varlist {
+                // Check if value label exists
+                local lbl : value label `var'
+                if "`lbl'" == "" {
+                    // Create temporary value label
+                    tempname tmplbl
+                    qui levelsof `var', local(values)
+                    foreach val in `values' {
+                        local lbltxt = strofreal(`val') // Convert number to string
+                        label define `tmplbl' `val' "`lbltxt'", add
+                    }
+                    label values `var' `tmplbl'
+                    if "`debug'" == "1" {
+                        di as text "Temporary label applied: `var'"
+                    }
+                }
+            }
+
             quietly uselabel, clear var
             ren lname labelname
             quietly generate varname = ""
             foreach lbl in `r(__labnames__)' {
-                quietly replace varname = "`r(`lbl')'" if lname == "`lbl'"
+                quietly replace varname = "`r(`lbl')'" if labelname == "`lbl'"
             }
             quietly sort labelname value
             quietly by labelname: generate index = _n
@@ -623,6 +687,36 @@ program define _argcheck, rclass
             }
         }
     }
+
+end
+
+// * Determines the data source
+capture program drop _argload
+program define _argload, rclass
+    syntax, [using(string) clear(string)]
+
+    local _inmemory = c(filename) != "" | c(N) > 0 | c(k) > 0 | c(changed) == 1
+    if `_inmemory' == 0 & "`using'" == "" {
+        display as error "No data source for executing dtfreq. Please specify a dataset using the 'using' or load the data into memory."
+        exit 198
+    }
+
+    // define dataset
+    if "`using'" != "" {
+        if `_inmemory' == 1 & "`clear'" == "" {
+            return local _defaultframe = c(frame)
+            capture frame drop _dtsource
+            frame create _dtsource
+            cwf _dtsource
+            return local source_frame "_dtsource"
+            quietly use `"`using'"', clear
+        }
+        else {
+            quietly use `"`using'"', clear
+            return local source_frame = c(frame)
+        }
+    }
+    else if "`using'" == "" & `_inmemory' == 1 return local source_frame = c(frame)
 
 end
 
