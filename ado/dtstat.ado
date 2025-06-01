@@ -444,7 +444,7 @@ program define _argload, rclass
 
     local _inmemory = c(filename) != "" | c(N) > 0 | c(k) > 0 | c(changed) == 1
     if `_inmemory' == 0 & "`using'" == "" {
-        display as error "No data source for executing dtfreq. Please specify a dataset using the 'using' or load the data into memory."
+        display as error "No data source for executing dtstat. Please specify a dataset using the 'using' or load the data into memory."
         exit 198
     }
 
