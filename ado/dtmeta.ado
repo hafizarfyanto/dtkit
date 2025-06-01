@@ -4,10 +4,10 @@ program define dtmeta, rclass
     * Module to produce three metadata datasets in separate frames
     
     version 16
-    syntax [using/] [, Clear REPlace REPORT excel(string asis)]
+    syntax [using/] [, Clear REPlace REPORT save(string asis)]
 
     // validate inputs
-    _argload, clear(`clear') using(`using') replace(`replace') excel(`excel')
+    _argload, clear(`clear') using(`using') replace(`replace') save(`save')
 
     // Define frames
     local source_frame `r(source_frame)'
@@ -37,13 +37,13 @@ program define dtmeta, rclass
     quietly labelbook
     return add
 
-    // export to excel
-    if `"`excel'"' != "" _toexcel, excel(`excel')
+    // export to save
+    if `"`save'"' != "" _tosave, save(`save')
     if "`_defaultframe'" != "" cwf `_defaultframe'
     return local source_frame `source_frame'
 
     // Generate report if requested
-    _makereport, source_frame(`source_frame') clear(`clear') saving(`excel') report(`report')
+    _makereport, source_frame(`source_frame') clear(`clear') saving(`save') report(`report')
 end
 
 // * create variable metadata
@@ -227,14 +227,14 @@ program define _labelframes
 end
 
 // * Saves the final table to Excel file
-capture program drop _toexcel
-program define _toexcel
+capture program drop _tosave
+program define _tosave
 
-    syntax, [excel(string asis) replace(string)]
+    syntax, [save(string asis) replace(string)]
 
-    // export to excel
-    if `"`excel'"' != "" {
-        local inputfile = subinstr(`"`excel'"', `"""', "", .)
+    // export to save
+    if `"`save'"' != "" {
+        local inputfile = subinstr(`"`save'"', `"""', "", .)
         if ustrregexm("`inputfile'", "^(.*[/\\])?([^/\\]+?)(\.[^./\\]+)?$") {
             local fullpath = ustrregexs(1)
             local filename = ustrregexs(2)
@@ -259,7 +259,7 @@ end
 // * Checks if user inputs are valid before starting
 capture program drop _argload
 program define _argload, rclass
-    syntax, [using(string) clear(string) replace(string) excel(string)]
+    syntax, [using(string) clear(string) replace(string) save(string)]
 
     // clear only makes sense together with using
     if "`clear'" != "" & "`using'" == "" {
@@ -267,9 +267,9 @@ program define _argload, rclass
         exit 198
     }
 
-    // replace only makes sense together with excel
-    if "`replace'" != "" & "`excel'" == "" {
-        display as error "option replace only allowed with excel"
+    // replace only makes sense together with save
+    if "`replace'" != "" & "`save'" == "" {
+        display as error "option replace only allowed with save"
         exit 198
     }
 
