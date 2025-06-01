@@ -1,7 +1,5 @@
 # dtkit: Data Toolkit for Stata
 
-# dtkit: Data Toolkit for Stata
-
 [![Stata Package](https://img.shields.io/badge/Stata-ado-blue)](https://github.com/hafizarfyanto/dtkit)
 ![Version](https://img.shields.io/badge/Version-2.1.0-green)
 ![Stata 16+](https://img.shields.io/badge/Stata-16%2B-purple)
