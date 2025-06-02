@@ -1,3 +1,4 @@
+// * examples:
 // Basic metadata extraction from data in memory
 
         sysuse auto
