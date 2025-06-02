@@ -8,3 +8,4 @@ test/
 .DS_Store
 Thumbs.db
 *.xlsx
+package_maintenance_guide.*
