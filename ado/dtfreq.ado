@@ -51,7 +51,10 @@ program define dtfreq
     if "`format'" == "" {
         frame `df': _formatvars `r(varlist)'
     }
-    else frame `df': format `r(varlist)' `format' 
+    else {
+        frame `df': quietly ds *, has(type numeric)
+        frame `df': format `r(varlist)' `format' 
+    }
 
     // add total
     if "`cross'" != "" & "`binary'" == "" {
@@ -75,7 +78,7 @@ program define dtfreq
 
 
     // export to excel
-    if "`save'" != "" {
+    if `"`save'"' != "" {
         local inputfile = subinstr(`"`save'"', `"""', "", .)
         if ustrregexm("`inputfile'", "^(.*[/\\])?([^/\\]+?)(\.[^./\\]+)?$") {
             local fullpath = ustrregexs(1)
@@ -83,7 +86,7 @@ program define dtfreq
             local extension = ustrregexs(3)
             local fullname = "`fullpath'`filename'`extension'"
         }
-        frame `df': _toexcel, fullname(`fullname') excel(`excel')
+        frame `df': _toexcel, fullname(`fullname') excel(`excel') replace(`replace')
     }
 
 end
@@ -584,13 +587,13 @@ program define _argcheck, rclass
     }
 
     // replace only makes sense together with save
-    if "`replace'" != "" & "`save'" == "" {
+    if "`replace'" != "" & `"`save'"' == "" {
         display as error "option replace only allowed with save"
         exit 198
     }
 
     // Ensure excel is only present if using is present
-    if "`save'" == "" & "`excel'" != "" {
+    if `"`save'"' == "" & "`excel'" != "" {
         display as error "excel() option is only allowed when save() is also specified."
         exit 198
     }
