@@ -243,13 +243,13 @@ program define _toexcel
         }
     }
 
+    if "`replace'" == "" local replace "modify"
     if "`fullname'" != "" {
         // Set export options
         quietly frames dir _dt*
-        if "`replace'" == "" local exportcmd `"`fullname', sheet("`sheetname'", modify) firstrow(varlabels)"'
-        else local exportcmd `"`fullname', sheet("`sheetname'") firstrow(varlabels) replace"'
         foreach fr in `r(frames)' {
             frame `fr': local sheetname: data label
+            local exportcmd `"`fullname', sheet("`sheetname'", `replace') firstrow(varlabels)"'
             frame `fr': export excel using `exportcmd'
         }
     }
