@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 2.1.0 29May2025}{...}
+{* *! version 1.0.0 02Jun2025}{...}
 {vieweralsosee "[R] contract" "help contract"}{...}
 {vieweralsosee "[R] table" "help table"}{...}
 {vieweralsosee "[R] tabstat" "help tabstat"}{...}
@@ -46,6 +46,8 @@
 {syntab:Export}
 {synopt:{opt save(filename)}}export results to Excel file{p_end}
 {synopt:{opt excel(export_options)}}additional options for Excel export{p_end}
+{synopt:{opt clear}}clear data from memory when using external file{p_end}
+{synopt:{opt replace}}replace existing Excel file when saving{p_end}
 {synoptline}
 {p2colreset}{...}
 {p 4 6 2}
@@ -145,73 +147,86 @@ command. Can only be used with {cmd:save()}.
 {marker examples}{...}
 {title:Examples}
 
-{pstd}Setup using a standard Stata dataset:{p_end}
+{pstd}Setup using standard Stata datasets:{p_end}
 
-        {cmd:. capture frame rename default nlsw88}
-        {cmd:. sysuse nlsw88.dta, clear}
+        {cmd:. sysuse auto, clear}
 
 {pstd}Basic frequency examples:{p_end}
 
-{pstd}1. Simple frequency table (column proportions by default):{p_end}
+{pstd}1. Simple frequency table for one variable:{p_end}
 
-        {cmd:. frame nlsw88: dtfreq race, df(tf1)}
-        {cmd:. frame tf1: list, clean noobs}
+        {cmd:. dtfreq rep78}
+        {cmd:. frame _df: list, clean noobs}
 
-{pstd}2. Show percentages instead of proportions:{p_end}
+{pstd}2. Multiple variables:{p_end}
 
-        {cmd:. frame nlsw88: dtfreq race, df(tf2) type(pct)}
-        {cmd:. frame tf2: list, clean noobs}
+        {cmd:. dtfreq rep78 foreign}
+        {cmd:. frame _df: tab varname}
 
-{pstd}3. Show both proportions and percentages:{p_end}
+{pstd}3. Show percentages instead of proportions:{p_end}
 
-        {cmd:. frame nlsw88: dtfreq race, df(tf3) type(prop pct)}
-        {cmd:. frame tf3: list, clean noobs}
-
-{pstd}Statistics direction examples:{p_end}
-
-{pstd}4. Row proportions with grouping:{p_end}
-
-        {cmd:. frame nlsw88: dtfreq race, df(tf4) by(married) cross(collgrad) stats(row)}
-        {cmd:. frame tf4: list, noobs sepby(varname)}
-
-{pstd}5. Column percentages with grouping:{p_end}
-
-        {cmd:. frame nlsw88: dtfreq race, df(tf5) by(married) cross(collgrad) stats(col) type(pct)}
-        {cmd:. frame tf5: list, noobs sepby(varname)}
-
-{pstd}6. Both row and column statistics:{p_end}
-
-        {cmd:. frame nlsw88: dtfreq race, df(tf6) by(married) cross(collgrad) stats(row col) type(prop pct)}
-        {cmd:. frame tf6: describe}
+        {cmd:. dtfreq rep78, type(pct)}
+        {cmd:. frame _df: list, clean noobs}
 
 {pstd}Cross-tabulation examples:{p_end}
 
-{pstd}7. Cross-tabulation with column groups:{p_end}
+{pstd}4. by option (row groups):{p_end}
 
-        {cmd:. frame nlsw88: dtfreq race, df(tf7) cross(married)}
-        {cmd:. frame tf7: list, clean noobs}
+        {cmd:. dtfreq rep78, by(foreign)}
+        {cmd:. frame _df: list varname foreign vallab freq colprop, clean sepby(varname)}
 
-{pstd}8. Two-way table with all statistics:{p_end}
+{pstd}5. cross option (column groups):{p_end}
 
-        {cmd:. frame nlsw88: dtfreq race, df(tf8) by(collgrad) cross(married) stats(row col cell) type(prop pct)}
-        {cmd:. frame tf8: describe}
+        {cmd:. dtfreq rep78, cross(foreign)}
+        {cmd:. frame _df: describe, simple}
+        {cmd:. frame _df: list, clean noobs}
+
+{pstd}6. Both by and cross options:{p_end}
+
+        {cmd:. dtfreq rep78, by(foreign) cross(trunk)}
+        {cmd:. frame _df: list, clean sepby(varname)}
+
+{pstd}Statistics direction examples:{p_end}
+
+{pstd}7. Row proportions:{p_end}
+
+        {cmd:. dtfreq rep78, cross(foreign) stats(row)}
+        {cmd:. frame _df: list, clean noobs}
+
+{pstd}8. Cell proportions:{p_end}
+
+        {cmd:. dtfreq rep78, cross(foreign) stats(cell)}
+        {cmd:. frame _df: list, clean noobs}
+
+{pstd}9. Multiple statistics types:{p_end}
+
+        {cmd:. dtfreq rep78, cross(foreign) stats(row col) type(prop pct)}
+        {cmd:. frame _df: describe}
 
 {pstd}Binary variable examples:{p_end}
 
-{pstd}9. Binary variable with yes/no reshaping (note: may produce incorrect proportions due to missing values):{p_end}
+        {cmd:. sysuse nlsw88, clear}
 
-        {cmd:. frame nlsw88: dtfreq union, df(tf9) binary}
-        {cmd:. frame tf9: list, clean noobs}
+{pstd}10. Binary variable reshaping:{p_end}
 
-{pstd}10. Binary variable with proper missing value handling:{p_end}
+        {cmd:. dtfreq union, binary}
+        {cmd:. frame _df: list, clean noobs}
 
-        {cmd:. frame nlsw88: dtfreq union, df(tf10) binary nomiss cross(collgrad) stats(col) type(pct)}
-        {cmd:. frame tf10: list, clean noobs}
+{pstd}11. Binary with cross-tabulation:{p_end}
 
-{pstd}11. Complex binary analysis with grouping:{p_end}
+        {cmd:. dtfreq union, binary cross(collgrad)}
+        {cmd:. frame _df: list, clean noobs}
 
-        {cmd:. frame nlsw88: dtfreq union, df(tf11) by(collgrad) cross(race) binary stats(row col) type(prop pct) format(%8.2f)}
-        {cmd:. frame tf11: describe}
+{pstd}Export examples:{p_end}
+
+{pstd}12. Export to Excel:{p_end}
+
+        {cmd:. dtfreq rep78, save(dtfreq_output.xlsx) replace}
+
+{pstd}13. Using external data file:{p_end}
+
+        {cmd:. dtfreq rep78 using "auto.dta", clear}
+        {cmd:. frame _df: list, clean noobs}
 
 {marker results}{...}
 {title:Stored results}
@@ -257,7 +272,7 @@ The active frame remains unchanged unless an error occurs during frame switching
 {pstd}GitHub: {browse "https://github.com/hafizarfyanto/dtkit":https://github.com/hafizarfyanto/dtkit}{p_end}
 
 {pstd}
-Program Version: {bf:2.1.0} (29 May 2025)
+Program Version: {bf:1.0.0} (02 June 2025)
 
 {title:Also see}
 

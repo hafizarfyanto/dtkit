@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 2.1.1  02June2025}{...}
+{* *! version 1.0.0  02Jun2025}{...}
 {vieweralsosee "[R] summarize" "help summarize"}{...}
 {vieweralsosee "[R] collapse" "help collapse"}{...}
 {vieweralsosee "[R] tabstat" "help tabstat"}{...}
@@ -41,7 +41,8 @@
 {syntab:Export}
 {synopt:{opt save(excelname)}}export results to Excel file{p_end}
 {synopt:{opt excel(export_options)}}specify additional options for Excel export{p_end}
-{synopt:{opt rep:lace}}specify that {it:excelname} should be replaced if it already exists{p_end}
+{synopt:{opt clear}}clear data from memory when using external file{p_end}
+{synopt:{opt replace}}replace existing Excel file when saving{p_end}
 {synoptline}
 {p2colreset}{...}
 {p 4 6 2}
@@ -132,7 +133,7 @@ This option requires the {cmd:gtools} package to be installed. If {cmd:gtools} i
 {dlgtab:Export}
 
 {phang}
-{opt save(excelname)} exports the results to an Excel file named {it:filename}.
+{opt save(excelname)} exports the results to an Excel file named {it:excelname}.
 When {cmd:save()} is specified, the statistics frame is exported to the Excel file.
 If not specified, results are only stored in the Stata frame.
 
@@ -143,7 +144,7 @@ These {it:export_options} are passed directly to {cmd:export excel}. There is no
 and replace an existing sheet, one might use {cmd:excel(sheet("SummaryStats"), replace)}.
 If not specified, {cmd:dtstat} uses default export options:
 {cmd:sheet("dtstat_output", modify) firstrow(varlabels)}.
-This option is only valid when {cmd:save()} {it:excelname} is also specified.
+This option is only valid when {cmd:save(excelname)} is also specified.
 
 {phang}
 {opt replace} specifies that if the specified sheet in {it:excelname} file already exists, it should be replaced.
@@ -151,40 +152,62 @@ This option is only valid when {cmd:save()} {it:excelname} is also specified.
 {marker examples}{...}
 {title:Examples}
 
-{pstd}Setup using a standard Stata dataset:{p_end}
-        
-        {cmd:. capture frame create nlsw88}
-        {cmd:. frame nlsw88: sysuse nlsw88.dta, clear}
+{pstd}Setup using standard Stata datasets:{p_end}
 
-{pstd}1. One-way descriptive statistics for {cmd:age} and {cmd:grade}, results in frame {cmd:_df}:{p_end}
+        {cmd:. sysuse auto, clear}
 
-        {cmd:. frame nlsw88: dtstat age grade}
+{pstd}Basic descriptive statistics examples:{p_end}
+
+{pstd}1. Simple descriptive statistics:{p_end}
+
+        {cmd:. dtstat price mpg weight}
         {cmd:. frame _df: list, clean noobs}
 
-{pstd}2. Descriptive statistics (default) for {cmd:age} and {cmd:grade} stratified by {cmd:married}, results in frame {cmd:df2}:{p_end}
+{pstd}2. Statistics with grouping:{p_end}
 
-        {cmd:. frame nlsw88: dtstat age grade, df(df2) by(married)}
-        {cmd:. frame df2: list, noobs sepby(married)}
+        {cmd:. dtstat price mpg, by(foreign)}
+        {cmd:. frame _df: list, noobs sepby(foreign)}
 
-{pstd}3. Descriptive statistics (count, mean, and standard deviation) for {cmd:age} and {cmd:grade} stratified by {cmd:married}, results in frame {cmd:df3}:{p_end}
+{pstd}3. Custom statistics selection:{p_end}
 
-        {cmd:. frame nlsw88: dtstat age grade, df(df3) by(married) stats(count mean sd)}
-        {cmd:. frame df3: list, noobs sepby(married)}
-
-{pstd}4. Descriptive statistics (count, mean, and standard deviation) for {cmd:age} and {cmd:grade} stratified by {cmd:married} with {opt format} option (i.e. non-integer values are displayed with two decimal digit and both integer), results in frame {cmd:df4}:{p_end}
-
-        {cmd:. frame nlsw88: dtstat age grade, df(df4) by(married) stats(count mean sd) format(}{bf:%}{cmd:8.2f)}
-        {cmd:. frame df4: list, noobs sepby(married)}
-
-{pstd}5. One-way descriptive statistics for {cmd:age} and {cmd:grade}, results in frame {cmd:_df}, export to excel:{p_end}
-
-        {cmd:. frame nlsw88: dtstat age grade, save("examples/_df.xlsx")}
+        {cmd:. dtstat price mpg weight, stats(count mean sd min max)}
         {cmd:. frame _df: list, clean noobs}
 
-{pstd}6. Descriptive statistics (default) for {cmd:age} and {cmd:grade} stratified by {cmd:married}, results in frame {cmd:df2}, export to excel:{p_end}
+{pstd}4. With custom format:{p_end}
 
-        {cmd:. frame nlsw88: dtstat age grade, df(df2) by(married) save("examples/df2.xlsx") excel(sheet("sum", modify))}
-        {cmd:. frame df2: list, noobs sepby(married)}
+        {cmd:. dtstat price mpg, by(foreign) format(%8.2f)}
+        {cmd:. frame _df: list, noobs sepby(foreign)}
+
+{pstd}Advanced examples:{p_end}
+
+{pstd}5. Multiple grouping variables:{p_end}
+
+        {cmd:. dtstat price mpg, by(foreign rep78)}
+        {cmd:. frame _df: list, noobs sepby(foreign rep78)}
+
+{pstd}6. Using weights:{p_end}
+
+        {cmd:. dtstat price mpg [fw=rep78]}
+        {cmd:. frame _df: list, clean noobs}
+
+{pstd}Export examples:{p_end}
+
+        {cmd:. sysuse nlsw88, clear}
+
+{pstd}7. Export to Excel:{p_end}
+
+        {cmd:. dtstat age grade, save(dtstat_output.xlsx) replace}
+        {cmd:. frame _df: list, clean noobs}
+
+{pstd}8. Export with grouping:{p_end}
+
+        {cmd:. dtstat age grade, by(married) save(dtstat_grouped.xlsx) excel(sheet("summary", modify)) replace}
+        {cmd:. frame _df: list, noobs sepby(married)}
+
+{pstd}9. Using external data file:{p_end}
+
+        {cmd:. dtstat age grade using "nlsw88.dta", clear}
+        {cmd:. frame _df: list, clean noobs}
 
 {marker results}{...}
 {title:Stored results}

@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 2.1.0 29May2025}{...}
+{* *! version 1.0.0 02Jun2025}{...}
 {viewerjumpto "Syntax" "dtkit##syntax"}{...}
 {viewerjumpto "Description" "dtkit##description"}{...}
 {viewerjumpto "Commands" "dtkit##commands"}{...}
@@ -63,7 +63,8 @@ Main options: {opt df(framename)} specifies the output frame name; {opt by(varli
 {opt stats(statlist)} specifies statistics to calculate (default: {cmd:count mean median min max});
 {opt format(%fmt)} sets the display format for statistic variables;
 {opt nomiss} excludes observations with missing values; {opt fast} uses {cmd:gtools} for faster processing;
-{opt save(filename)} exports results to Excel file; and {opt excel(export_options)} specifies additional options for Excel export.
+{opt save(filename)} exports results to Excel file; 
+and {opt replace} replaces existing Excel file when saving.
 
 {dlgtab:Frequency Analysis}
 
@@ -82,7 +83,8 @@ Main options: {opt df(framename)} specifies the output frame name; {opt by(varna
 {opt stats(statlist)} specifies direction for statistics (row, col, cell);
 {opt type(typelist)} sets statistic type (prop, pct);
 {opt format(%fmt)} sets display format; {opt nomiss} excludes missing values from analysis;
-{opt save(filename)} exports results to Excel file; and {opt excel(export_options)} specifies additional options for Excel export.
+{opt save(excelname)} exports results to Excel file named {it:excelname}; 
+and {opt replace} replaces existing Excel file when saving.
 
 {dlgtab:Dataset Metadata}
 
@@ -108,25 +110,24 @@ and {opt save(filename)} exports metadata frames to a specified Excel file.
 
 {pstd}{cmd:dtstat} - Enhanced descriptive statistics{p_end}
 {p 8 4 2}{stata dtstat price mpg weight}{p_end}
-{p 8 4 2}{stata dtstat price mpg, by(foreign) stats(count mean sd)}{p_end}
-{p 8 4 2}{stata dtstat price mpg, df(summary) save("summary.xlsx") format(%8.2f)}{p_end}
+{p 8 4 2}{stata dtstat price mpg, by(foreign)}{p_end}
+{p 8 4 2}{stata dtstat price mpg, save(summary.xlsx) replace}{p_end}
 
 {pstd}{cmd:dtfreq} - Comprehensive frequency analysis{p_end}
-{p 8 4 2}{stata dtfreq foreign}{p_end}
-{p 8 4 2}{stata dtfreq rep78, by(foreign) cross(gear_ratio > 3) type(pct)}{p_end}
-{p 8 4 2}{stata dtfreq foreign, binary cross(rep78) stats(row col) type(prop pct) save("freq.xlsx")}{p_end}
+{p 8 4 2}{stata dtfreq rep78}{p_end}
+{p 8 4 2}{stata dtfreq rep78, by(foreign)}{p_end}
+{p 8 4 2}{stata dtfreq rep78, save(freq.xlsx) replace}{p_end}
 
 {pstd}{cmd:dtmeta} - Dataset metadata extraction{p_end}
-{p 8 4 2}{stata dtmeta, report}{p_end}
-{p 8 4 2}{stata dtmeta using "nlsw88.dta", save("metadata.xlsx") replace clear}{p_end}
+{p 8 4 2}{stata dtmeta}{p_end}
+{p 8 4 2}{stata dtmeta, save(metadata.xlsx) replace}{p_end}
 
 {pstd}Combined workflow example{p_end}
-{p 8 4 2}{stata sysuse nlsw88, clear}{p_end}
-{p 8 4 2}{stata dtmeta, replace report}{p_end}
-{p 8 4 2}{stata dtstat age grade, df(summary) by(married) stats(count mean sd)}{p_end}
-{p 8 4 2}{stata dtfreq race, df(frequencies) cross(collgrad) stats(col) type(pct)}{p_end}
-{p 8 4 2}{stata frame summary: list, noobs sepby(married)}{p_end}
-{p 8 4 2}{stata frame frequencies: list, clean noobs}{p_end}
+{p 8 4 2}{stata sysuse auto, clear}{p_end}
+{p 8 4 2}{stata dtmeta}{p_end}
+{p 8 4 2}{stata dtstat price mpg, by(foreign)}{p_end}
+{p 8 4 2}{stata dtfreq rep78, by(foreign)}{p_end}
+{p 8 4 2}{stata frame _df: list, noobs clean}{p_end}
 
 {marker remarks}{...}
 {title:Remarks}
@@ -183,7 +184,7 @@ Also consider {stata ssc install gcollapse} if using older versions of gtools.{p
 {pstd}GitHub: {browse "https://github.com/hafizarfyanto/dtkit":https://github.com/hafizarfyanto/dtkit}{p_end}
 
 {pstd}
-Program Version: {bf:2.1.0} (30 May 2025)
+Program Version: {bf:1.0.0} (02 Jun 2025)
 
 {pstd}
 The {opt dtkit} package was developed to provide Stata users with tools that enhance

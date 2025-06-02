@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 2.1.0  30may2025}{...}
+{* *! version 1.0.0  02Jun2025}{...}
 {vieweralsosee "[R] describe" "help describe"}{...}
 {vieweralsosee "[R] notes" "help notes"}{...}
 {vieweralsosee "[R] label" "help label"}{...}
@@ -31,7 +31,7 @@
 {synopt:{opt c:lear}}clear original data from memory after loading external data{p_end}
 {synopt:{opt rep:lace}}replace existing metadata frames{p_end}
 {synopt:{opt report}}display metadata extraction report{p_end}
-{synopt:{opt save(excelname)}}export metadata frames to Excel file{p_end}
+{synopt:{opt save(filename)}}save metadata to Excel file{p_end}
 {synoptline}
 {p2colreset}{...}
 
@@ -87,7 +87,8 @@ This report includes:
 {opt save(excelname)} exports all created metadata frames to an Excel file named {it:excelname}.
 Each frame is saved as a separate worksheet within the Excel file. The worksheet names will
 correspond to the frame names (e.g., _dtvars, _dtlabel). If the specified Excel file
-already exists, the {opt replace} option must also be used to overwrite it.
+already exists, the {opt replace} option must also be used to overwrite it. The filename
+can be specified with or without the {cmd:.xlsx} extension.
 
 {marker remarks}{...}
 {title:Remarks}
@@ -202,52 +203,58 @@ the data in memory is replaced by the data from the specified file before metada
 {marker examples}{...}
 {title:Examples}
 
-{pstd}{bf:Basic metadata extraction from data in memory}{p_end}
+{pstd}Setup using standard Stata datasets:{p_end}
 
-        {cmd:. sysuse auto}
+        {cmd:. sysuse auto, clear}
+
+{pstd}Basic metadata extraction examples:{p_end}
+
+{pstd}1. Basic metadata extraction from data in memory:{p_end}
+
         {cmd:. dtmeta}
+        {cmd:. frame _dtvars: list varname type format vallab, clean noobs}
+        {cmd:. frame _dtinfo: list, clean noobs}
 
-{pstd}{bf:Extract metadata from external file}{p_end}
+{pstd}2. Extract metadata from external file:{p_end}
 
         {cmd:. dtmeta using "https://www.stata-press.com/data/r18/nlswork.dta"}
+        {cmd:. frame _dtvars: list varname type varlab, clean noobs}
 
-{pstd}{bf:Show detailed report with frame access commands}{p_end}
+{pstd}3. Show detailed report with frame access commands:{p_end}
 
         {cmd:. dtmeta, report}
 
-{pstd}{bf:Export to Excel with file replacement}{p_end}
+{pstd}4. Export to Excel with file replacement:{p_end}
 
-        {cmd:. dtmeta, save("dataset_metadata.xlsx") replace}
+        {cmd:. dtmeta, save(dataset_metadata.xlsx) replace}
 
-{pstd}{bf:Work with variable metadata}{p_end}
+{pstd}Advanced examples:{p_end}
+
+{pstd}5. Work with variable metadata:{p_end}
 
         {cmd:. dtmeta using "https://www.stata-press.com/data/r18/fullauto.dta", clear}
         {cmd:. frame _dtvars: list varname type format vallab}
 
-{pstd}{bf:Analyze value label coverage}{p_end}
+{pstd}6. Analyze value label coverage:{p_end}
 
         {cmd:. dtmeta}
         {cmd:. frame _dtvars: generate has_vallab = (vallab != "")}
         {cmd:. frame _dtvars: tab has_vallab}
 
-{pstd}{bf:Examine variable notes}{p_end}
+{pstd}7. Examine variable notes:{p_end}
 
         {cmd:. notes make: test note}
         {cmd:. dtmeta}
         {cmd:. frame _dtnotes: list varname _note_text}
 
-{pstd}{bf:Review dataset information}{p_end}
+{pstd}8. Review dataset information:{p_end}
 
         {cmd:. dtmeta}
         {cmd:. frame _dtinfo: list, noobs}
 
-{pstd}{bf:Comprehensive workflow with external data and export}{p_end}
+{pstd}9. Comprehensive workflow with external data and export:{p_end}
 
-        {cmd:. dtmeta using "https://www.stata-press.com/data/r18/nlswork.dta", save("mydata_metadata.xlsx") replace report clear}
-
-{pstd}{bf:Clear memory after loading external data}{p_end}
-
-        {cmd:. dtmeta using "https://www.stata-press.com/data/r18/nlswork.dta", clear}
+        {cmd:. dtmeta using "https://www.stata-press.com/data/r18/nlswork.dta", save(mydata_metadata.xlsx) replace report clear}
 
 {marker results}{...}
 {title:Stored results}
@@ -292,7 +299,7 @@ the data in memory is replaced by the data from the specified file before metada
 {pstd}GitHub: {browse "https://github.com/hafizarfyanto/dtkit":https://github.com/hafizarfyanto/dtkit}{p_end}
 
 {pstd}
-Program Version: {bf:2.1.0} (30 May 2025)
+Program Version: {bf:1.0.0} (02 June 2025)
 
 {pstd}
 For questions and suggestions, please contact the author.
