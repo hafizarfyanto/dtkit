@@ -53,7 +53,7 @@ program define dtstat
     _format, by(`by') format(`format') df(`df')    
 
     // export to excel
-    if "`save'" != "" {
+    if `"`save'"' != "" {
         local inputfile = subinstr(`"`save'"', `"""', "", .)
         if ustrregexm("`inputfile'", "^(.*[/\\])?([^/\\]+?)(\.[^./\\]+)?$") {
             local fullpath = ustrregexs(1)
@@ -209,10 +209,17 @@ program define _format
         // Apply variable labels
         _labelvars
         
-        // Apply formatting - get all variables and pass to _formatvars
+        // Apply formatting - respect user format choice
         quietly describe, varlist
         local all_vars "`r(varlist)'"
-        _formatvars `all_vars'
+        
+        if "`format'" == "" {
+            _formatvars `all_vars'
+        }
+        else {
+            quietly ds *, has(type numeric)
+            format `r(varlist)' `format'
+        }
     }
 end
 
@@ -349,11 +356,11 @@ program define _toexcel
 
     syntax, [fullname(string) excel(string) replace(string)]
 
+    if "`replace'" == "" local replace = "modify"
     if "`fullname'" != "" {
         // Set export options
         if `"`excel'"' == "" {
-            if "`replace'" != "" local exportcmd `"`fullname', sheet("dtstat_output", replace) firstrow(varlabels)"'
-            else local exportcmd `"`fullname', sheet("dtstat_output", modify) firstrow(varlabels)"'
+            local exportcmd `"`fullname', sheet("dtstat_output", `replace') firstrow(varlabels)"'
         }
         else {
             local exportcmd `"`fullname', `excel'"'
@@ -368,17 +375,17 @@ end
 // * Checks if user inputs are valid before starting
 capture program drop _argcheck
 program define _argcheck, rclass
-    syntax, [fast(string) excel(string) save(string)] varlist(namelist)
+    syntax, [fast(string) excel(string) save(string asis)] varlist(namelist)
 
     // * Cross-option validation
     // Ensure excel is only present if using is present
-    if "`save'" == "" & "`excel'" != "" {
+    if `"`save'"' == "" & "`excel'" != "" {
         display as error "excel() option is only allowed when save() is also specified."
         exit 198
     }
 
     // replace only makes sense together with save
-    if "`replace'" != "" & "`save'" == "" {
+    if "`replace'" != "" & `"`save'"' == "" {
         display as error "option replace only allowed with save"
         exit 198
     }
