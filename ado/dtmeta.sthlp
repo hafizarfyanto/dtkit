@@ -77,8 +77,8 @@ This option is only valid when {cmd:save()} is also specified.
 {phang}
 {opt report} displays a summary report in the Stata console after metadata extraction.
 This report includes:
-{p_end
-}{phang2}• Information about the source dataset (e.g., filename, number of variables, number of observations).{p_end}
+{p_end}
+{phang2}• Information about the source dataset (e.g., filename, number of variables, number of observations).{p_end}
 {phang2}• A summary of the metadata frames created, including the number of rows in each.{p_end}
 {phang2}• Clickable links to view each created frame (e.g., {stata "frame _dtvars: list"}).{p_end}
 {pstd}This option provides immediate feedback on the metadata extraction process.
@@ -112,51 +112,55 @@ Additionally, each frame is assigned a descriptive frame label.
 
 {pstd}
 The {cmd:_dtvars} frame contains variable-level metadata:
+
 {p2colset 5 25 29 2}{...}
-{p2col : {cmd:_level}}Metadata level identifier (e.g., "variable"){p_end}
-{p2col : {cmd:varname}}Variable name{p_end}
-{p2col : {cmd:position}}Position of the variable in the dataset order{p_end}
-{p2col : {cmd:type}}Storage type of the variable (e.g., {cmd:int}, {cmd:float}, {cmd:str##}){p_end}
-{p2col : {cmd:format}}Display format of the variable (e.g., {cmd:%9.0g}, {cmd:%8.2f}){p_end}
-{p2col : {cmd:vallab}}Name of the value label set associated with the variable, if any{p_end}
-{p2col : {cmd:varlab}}Variable label{p_end}
+{p2col :{cmd:_level}}Metadata level identifier (e.g., "variable"){p_end}
+{p2col :{cmd:varname}}Variable name{p_end}
+{p2col :{cmd:position}}Position of the variable in the dataset order{p_end}
+{p2col :{cmd:type}}Storage type of the variable (e.g., {cmd:int}, {cmd:float}, {cmd:str##}){p_end}
+{p2col :{cmd:format}}Display format of the variable (e.g., {cmd:%9.0g}, {cmd:%8.2f}){p_end}
+{p2col :{cmd:vallab}}Name of the value label set associated with the variable, if any{p_end}
+{p2col :{cmd:varlab}}Variable label{p_end}
 {p2colreset}{...}
 
 {pstd}
 The {cmd:_dtlabel} frame contains detailed information about value labels:
+
 {p2colset 5 25 29 2}{...}
-{p2col : {cmd:_level}}Metadata level identifier (e.g., "value label"){p_end}
-{p2col : {cmd:varname}}Name of a variable that uses {cmd:vallab}{p_end}
-{p2col : {cmd:index}}Order/index of the specific labeled value within {cmd:vallab}{p_end}
-{p2col : {cmd:vallab}}Name of the value label set{p_end}
-{p2col : {cmd:value}}The numeric value being labeled{p_end}
-{p2col : {cmd:label}}The text of the label corresponding to {cmd:value}{p_end}
-{p2col : {cmd:trunc}}Indicator for truncated label text (1 if truncated, 0 otherwise){p_end}
+{p2col :{cmd:_level}}Metadata level identifier (e.g., "value label"){p_end}
+{p2col :{cmd:varname}}Name of a variable that uses {cmd:vallab}{p_end}
+{p2col :{cmd:index}}Order/index of the specific labeled value within {cmd:vallab}{p_end}
+{p2col :{cmd:vallab}}Name of the value label set{p_end}
+{p2col :{cmd:value}}The numeric value being labeled{p_end}
+{p2col :{cmd:label}}The text of the label corresponding to {cmd:value}{p_end}
+{p2col :{cmd:trunc}}Indicator for truncated label text (1 if truncated, 0 otherwise){p_end}
 {p2colreset}{...}
 
 {pstd}
 The {cmd:_dtnotes} frame contains notes attached to variables:
+
 {p2colset 5 25 29 2}{...}
-{p2col : {cmd:_level}}Metadata level identifier (e.g., "variable"){p_end}
-{p2col : {cmd:varname}}Name of the variable to which the note is attached{p_end}
-{p2col : {cmd:_note_id}}Sequence number of the note for the variable{p_end}
-{p2col : {cmd:_note_text}}Full text content of the note (strL){p_end}
+{p2col :{cmd:_level}}Metadata level identifier (e.g., "variable"){p_end}
+{p2col :{cmd:varname}}Name of the variable to which the note is attached{p_end}
+{p2col :{cmd:_note_id}}Sequence number of the note for the variable{p_end}
+{p2col :{cmd:_note_text}}Full text content of the note (strL){p_end}
 {p2colreset}{...}
 
 {pstd}
 The {cmd:_dtinfo} frame contains dataset-level information and notes:
+
 {p2colset 5 25 29 2}{...}
-{p2col : {cmd:_level}}Metadata level identifier (e.g., "dataset"){p_end}
-{p2col : {cmd:dta_note_id}}Sequence number of a dataset-level note{p_end}
-{p2col : {cmd:dta_note}}Full text content of a dataset-level note (strL){p_end}
-{p2col : {cmd:dta_obs}}Number of observations in the dataset{p_end}
-{p2col : {cmd:dta_vars}}Number of variables in the dataset{p_end}
-{p2col : {cmd:dta_label}}Dataset label{p_end}
-{p2col : {cmd:dta_ts}}Timestamp of when the dataset was last saved{p_end}
+{p2col :{cmd:_level}}Metadata level identifier (e.g., "dataset"){p_end}
+{p2col :{cmd:dta_note_id}}Sequence number of a dataset-level note{p_end}
+{p2col :{cmd:dta_note}}Full text content of a dataset-level note (strL){p_end}
+{p2col :{cmd:dta_obs}}Number of observations in the dataset{p_end}
+{p2col :{cmd:dta_vars}}Number of variables in the dataset{p_end}
+{p2col :{cmd:dta_label}}Dataset label{p_end}
+{p2col :{cmd:dta_ts}}Timestamp of when the dataset was last saved{p_end}
 {p2colreset}{...}
 
 {pstd}
-{ul:{bf:Frame Management}}}
+{ul:{bf:Frame Management}}
 
 {pstd}
 Each time {cmd:dtmeta} is executed, it replaces any existing frames named {cmd:_dtvars},
@@ -164,7 +168,7 @@ Each time {cmd:dtmeta} is executed, it replaces any existing frames named {cmd:_
 always reflect the current state of the source dataset as of the last execution of {cmd:dtmeta}.
 
 {pstd}
-{ul:{bf:Excel Export}}}
+{ul:{bf:Excel Export}}
 
 {pstd}
 When the {cmd:save(excelname)} option is specified, {cmd:dtmeta} exports all created
@@ -183,7 +187,7 @@ the absence of corresponding metadata. The {cmd:_dtvars} and {cmd:_dtinfo} frame
 created, as datasets will always have variables and basic descriptive characteristics.
 
 {pstd}
-{ul:{bf:Reporting and Navigation}}}
+{ul:{bf:Reporting and Navigation}}
 
 {pstd}
 Upon completion, {cmd:dtmeta} displays {help Stata_commands##clickable_links:clickable links} in the Stata Results window that allow easy access to view the contents of

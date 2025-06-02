@@ -4,6 +4,9 @@
 {vieweralsosee "[R] collapse" "help collapse"}{...}
 {vieweralsosee "[R] tabstat" "help tabstat"}{...}
 {vieweralsosee "[D] frame" "help frame"}{...}
+{vieweralsosee "dtfreq" "help dtfreq"}{...}
+{vieweralsosee "dtmeta" "help dtmeta"}{...}
+{vieweralsosee "dtkit" "help dtkit"}{...}
 {viewerjumpto "Syntax" "dtstat##syntax"}{...}
 {viewerjumpto "Description" "dtstat##description"}{...}
 {viewerjumpto "Options" "dtstat##options"}{...}
@@ -34,15 +37,15 @@
 {synopt:{opt df(framename)}}specify frame name for output dataset; default is {cmd:_df}{p_end}
 {synopt:{opt by(varlist)}}produce statistics by groups of variables{p_end}
 {synopt:{opt stats(statlist)}}specify statistics to calculate; default is {cmd:count mean median min max}{p_end}
-{synopt:{opt format(%fmt)}}specify number format for numeric variables{p_end}
+{synopt:{opt fo:rmat(%fmt)}}specify number format for numeric variables{p_end}
 {synopt:{opt nomiss}}exclude observations with missing values in variables{p_end}
-{synopt:{opt fast}}use {cmd:gtools} commands for faster processing{p_end}
+{synopt:{opt fa:st}}use {cmd:gtools} commands for faster processing{p_end}
+{synopt:{opt clear}}clear data from memory when using external file{p_end}
 
 {syntab:Export}
 {synopt:{opt save(excelname)}}export results to Excel file{p_end}
 {synopt:{opt excel(export_options)}}specify additional options for Excel export{p_end}
-{synopt:{opt clear}}clear data from memory when using external file{p_end}
-{synopt:{opt replace}}replace existing Excel file when saving{p_end}
+{synopt:{opt rep:lace}}replace existing Excel file when saving{p_end}
 {synoptline}
 {p2colreset}{...}
 {p 4 6 2}
@@ -128,7 +131,10 @@ nonmissing values for each variable or group individually (casewise deletion per
 used for computation where possible. This can significantly improve performance with large datasets.
 This option requires the {cmd:gtools} package to be installed. If {cmd:gtools} is not installed,
 {cmd:dtstat} will issue a warning and proceed using standard Stata commands.
-(See {stata "ssc install gtools":ssc install gtools}, {stata "ssc install gcollapse":ssc install gcollapse}).
+(Try {stata "ssc install gtools":installing gtools} and then {stata "gtools, upgrade":make sure that gtools is up to date}).
+
+{phang}
+{opt clear} removes the current dataset before loading a new one with {cmd:using} in the current {help frame}.
 
 {dlgtab:Export}
 

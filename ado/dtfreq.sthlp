@@ -33,21 +33,21 @@
 {synopt:{opt df(framename)}}specify name for destination {help frame}; default is {cmd:_df}{p_end}
 {synopt:{opt by}({varname})}create frequency tables by row groups{p_end}
 {synopt:{opt cross}({varname})}create frequency tables by column groups{p_end}
-{synopt:{opt binary}}reshape binary variables for yes/no analysis{p_end}
+{synopt:{opt bin:ary}}reshape binary variables for yes/no analysis{p_end}
+{synopt:{opt c:lear}}clear data from memory when using external file{p_end}
 
 {syntab:Statistics}
-{synopt:{opt stats(statlist)}}specify statistics direction: {cmdab:row}, {cmdab:col}, {cmdab:cell}; default is {cmd:col}{p_end}
-{synopt:{opt type(typelist)}}specify statistics type: {cmdab:prop}, {cmdab:pct}; default is {cmd:prop}{p_end}
+{synopt:{opt stat:s(statlist)}}specify statistics direction: {cmdab:row}, {cmdab:col}, {cmdab:cell}; default is {cmd:col}{p_end}
+{synopt:{opt ty:pe(typelist)}}specify statistics type: {cmdab:prop}, {cmdab:pct}; default is {cmd:prop}{p_end}
 
 {syntab:Display}
-{synopt:{opt format(%fmt)}}specify display format for numeric variables{p_end}
+{synopt:{opt fo:rmat(%fmt)}}specify display format for numeric variables{p_end}
 {synopt:{opt nomiss}}exclude missing values from analysis{p_end}
 
 {syntab:Export}
-{synopt:{opt save(filename)}}export results to Excel file{p_end}
+{synopt:{opt save(excelname)}}export results to Excel file{p_end}
 {synopt:{opt excel(export_options)}}additional options for Excel export{p_end}
-{synopt:{opt clear}}clear data from memory when using external file{p_end}
-{synopt:{opt replace}}replace existing Excel file when saving{p_end}
+{synopt:{opt rep:lace}}replace existing Excel file when saving{p_end}
 {synoptline}
 {p2colreset}{...}
 {p 4 6 2}
@@ -98,6 +98,9 @@ and percentage columns for each of its values. This option cannot be used with t
 This option creates separate columns in the output dataset for each response category of the binary variable.
 When combined with {opt cross}, this may produce more complex output structures.
 
+{phang}
+{opt clear} clears the current data in memory (current {help frame}) before loading an external file specified with {cmd:using}.
+
 {dlgtab:Statistics}
 
 {phang}
@@ -135,7 +138,7 @@ Specifying {opt nomiss} ensures that proportions and percentages are calculated 
 {dlgtab:Export}
 
 {phang}
-{opt save(filename)} exports the results to an Excel file named {it:filename}.
+{opt save(excelname)} exports the results to an Excel file named {it:excelname}.
 When {cmd:save()} is specified, the frequency table frame is exported to the Excel file.
 If not specified, results are only stored in the Stata frame.
 
