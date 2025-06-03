@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 1.0.0 02Jun2025}{...}
+{* *! version 1.0.1 03Jun2025}{...}
 {vieweralsosee "[R] contract" "help contract"}{...}
 {vieweralsosee "[R] table" "help table"}{...}
 {vieweralsosee "[R] tabstat" "help tabstat"}{...}
@@ -253,6 +253,7 @@ command. Can only be used with {cmd:save()}.
 {synopt:{cmd:cellpct*}}cell percentages{p_end}
 {synopt:{cmd:*total*}}total counts for denominators{p_end}
 
+{pstd}{bf:prop_all} and {bf:pct_all} show the overall proportion (1) and percentage (100) for the total row when using {opt cross()}. They help identify the grand total in the results.{p_end}
 {pstd}Variable presence depends on {opt stats()} and {opt type()} options:{p_end}
 
 {phang2}• {opt stats(col)} creates {cmd:colprop*} and/or {cmd:colpct*} variables{p_end}
@@ -275,7 +276,7 @@ The active frame remains unchanged unless an error occurs during frame switching
 {pstd}GitHub: {browse "https://github.com/hafizarfyanto/dtkit":https://github.com/hafizarfyanto/dtkit}{p_end}
 
 {pstd}
-Program Version: {bf:1.0.0} (02 June 2025)
+Program Version: {bf:1.0.1} (03 June 2025)
 
 {title:Also see}
 
