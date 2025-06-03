@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [dtkit-v1.0.1] - 2025-06-03
 
 ### Package Release
-- This update includes an important bug fix for the `dtfreq` and `dtstats` commands.
+- This update includes an important bug fix for the `dtfreq` and `dtstat` commands.
 - Component versions included in this release:
   - **dtfreq: v1.0.1 (Updated)**
   - **dtstat: v1.0.1 (Updated)**
