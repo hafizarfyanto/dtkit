@@ -8,16 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [dtkit-v1.0.1] - 2025-06-03
 
 ### Package Release
-- This update includes an important bug fix for the `dtfreq` command.
+- This update includes an important bug fix for the `dtfreq` and `dtstats` commands.
 - Component versions included in this release:
   - **dtfreq: v1.0.1 (Updated)**
-  - dtstat: v1.0.0 (Unchanged)
+  - **dtstat: v1.0.1 (Updated)**
   - dtmeta: v1.0.0 (Unchanged)
 
 ### Fixed
 - **dtfreq v1.0.1**:
   - Fixed an issue where the "Total" row in tables created with the `cross()` option sometimes showed incorrect calculations for proportions and percentages. Totals are now accurate.
-
+- **dtstat v1.0.1**:
+  - Fixed unused internal subroutine for sample marking.
+  
 ## [dtkit-v1.0.0] - 2025-06-02
 
 ### Package Release
