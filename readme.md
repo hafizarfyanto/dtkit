@@ -29,7 +29,7 @@ net install dtkit, from("https://raw.githubusercontent.com/hafizarfyanto/dtkit/m
 To ensure you have the most recent features and bug fixes:
 
 ```stata
-net install dtkit, replace force from("https://raw.githubusercontent.com/hafizarfyanto/dtkit/main/")
+net install dtkit, replace from("https://raw.githubusercontent.com/hafizarfyanto/dtkit/main/")
 ```
 
 ## Uninstalling
@@ -40,14 +40,15 @@ ado uninstall dtkit
 ```
 
 ### Alternative Uninstall Method
-If the standard uninstall method doesn't work (e.g., if dtkit was installed multiple times), you can use:
+If the standard uninstall method doesn't work (e.g., if dtkit was installed multiple times), we can follow these steps:
 
-```stata
-ado dir dtkit
-ado uninstall [pkgid]
-```
-
-Where `[pkgid]` is the index number shown by `ado dir dtkit`. This method is useful when you have accidentally installed dtkit multiple times or need to remove a specific installation.
+1. Run: `ado dir dtkit` in Stata command window
+2. Note all index numbers shown for dtkit installations
+3. Uninstall packages using index numbers in descending order:
+   ```stata
+   ado uninstall [highest_index]
+   ado uninstall [next_index]
+   ```
 
 ## Commands Overview
 
