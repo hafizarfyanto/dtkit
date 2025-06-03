@@ -1,6 +1,6 @@
 capture program drop dtfreq
 program define dtfreq
-    *! Version 1.0.0 Hafiz 02Jun2025
+    *! Version 1.0.1 Hafiz 03Jun2025
     * Module to produce frequency dataset
     version 16
     syntax anything(id="varlist") [if] [in] [aweight fweight iweight pweight] [using/] [, df(string) by(varname numeric) cross(varname numeric) BINary FOrmat(string) noMISS save(string asis) excel(string) STATs(namelist max=3) TYpe(namelist max=2) Clear REPlace]
@@ -306,9 +306,14 @@ program define _crosstotal
                     generate cellprop`suffix' = `tvar' / total_all
                     generate rowprop`suffix' = cellprop`suffix'  // Same as cellprop in totals
                     generate colprop`suffix' = 1
+                    generate cellpct`suffix' = cellprop`suffix' * 100
+                    generate rowpct`suffix' = rowprop`suffix' * 100
+                    generate colpct`suffix' = colprop`suffix' * 100
                     replace freq`suffix' = `tvar'   // Set freq to column total
                 }
             }
+            generate prop_all = 1
+            generate pct_all = 100
             replace `rowfreq' = total_all  // Set row frequency to overall total
             tempfile totalrows
             save `totalrows'
@@ -317,10 +322,10 @@ program define _crosstotal
         // Append and sort
         append using `totalrows'
         generate sortorder = 0
-        quietly replace sortorder = 1 if `vallabname' == "Total"
+        replace sortorder = 1 if `vallabname' == "Total"
         sort varname sortorder
         drop sortorder
-        quietly replace varlab = "Grand total" if `vallabname' == "Total"
+        replace varlab = "Grand total" if `vallabname' == "Total"
     }
 end
 // * Adds nice names to all output columns

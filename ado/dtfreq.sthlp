@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 1.0.0 02Jun2025}{...}
+{* *! version 1.0.1 03Jun2025}{...}
 {vieweralsosee "[R] contract" "help contract"}{...}
 {vieweralsosee "[R] table" "help table"}{...}
 {vieweralsosee "[R] tabstat" "help tabstat"}{...}
@@ -275,7 +275,7 @@ The active frame remains unchanged unless an error occurs during frame switching
 {pstd}GitHub: {browse "https://github.com/hafizarfyanto/dtkit":https://github.com/hafizarfyanto/dtkit}{p_end}
 
 {pstd}
-Program Version: {bf:1.0.0} (02 June 2025)
+Program Version: {bf:1.0.1} (03 June 2025)
 
 {title:Also see}
 
