@@ -1,6 +1,6 @@
 capture program drop dtstat
 program define dtstat
-    *! Version 1.0.0 Hafiz 02Jun2025
+    *! Version 1.0.1 Hafiz 03Jun2025
     * Module to produce descriptive statistics dataset
 
     version 16
@@ -28,16 +28,10 @@ program define dtstat
 
     // * weight and marker
     tempvar touse
-    if "`miss'" == "nomiss" {
-        marksample touse, strok
-    }
-    else {
-        marksample touse, strok novarlist
-    }
+    if "`miss'" == "nomiss" marksample touse, strok
+    else marksample touse, strok novarlist
     local ifcmd "if `touse'"
-    if "`weight'" != "" {
-        local wtexp `"[`weight'`exp']"'
-    }
+    if "`weight'" != "" local wtexp `"[`weight'`exp']"'
 
     // Process statistics options
     _stats, stats(`stats')    
@@ -62,29 +56,6 @@ program define dtstat
             local fullname = "`fullpath'`filename'`extension'"
         }
         frame `df': _toexcel, fullname(`fullname') excel(`excel') replace(`replace')
-    }
-end
-
-// * sample marking
-capture program drop _markobs
-program define _markobs, rclass
-    syntax [if] [in] [aweight fweight iweight pweight], [miss(string)]
-    
-    // Mark sample observations
-    if "`miss'" == "nomiss" {
-        marksample touse, strok
-    }
-    else {
-        marksample touse, strok novarlist
-    }
-
-    return local ifcmd "if `touse'"
-    
-    if "`weight'" != "" {
-        return local wtexp `"[`weight'`exp']"'
-    }
-    else {
-        return local wtexp ""
     }
 end
 

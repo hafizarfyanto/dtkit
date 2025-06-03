@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 1.0.0  02Jun2025}{...}
+{* *! version 1.0.1  03Jun2025}{...}
 {vieweralsosee "[R] summarize" "help summarize"}{...}
 {vieweralsosee "[R] collapse" "help collapse"}{...}
 {vieweralsosee "[R] tabstat" "help tabstat"}{...}
@@ -254,7 +254,7 @@ For example, if statistics are calculated for variables {cmd:v1} and {cmd:v2}, a
 {pstd}GitHub: {browse "https://github.com/hafizarfyanto/dtkit":https://github.com/hafizarfyanto/dtkit}{p_end}
 
 {pstd}
-Program Version: {bf:2.1.1} (02 June 2025)
+Program Version: {bf:1.0.1} (03 June 2025)
 
 {title:Dependencies}
 
