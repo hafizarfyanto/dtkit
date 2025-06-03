@@ -253,6 +253,7 @@ command. Can only be used with {cmd:save()}.
 {synopt:{cmd:cellpct*}}cell percentages{p_end}
 {synopt:{cmd:*total*}}total counts for denominators{p_end}
 
+{pstd}{bf:prop_all} and {bf:pct_all} show the overall proportion (1) and percentage (100) for the total row when using {opt cross()}. They help identify the grand total in the results.{p_end}
 {pstd}Variable presence depends on {opt stats()} and {opt type()} options:{p_end}
 
 {phang2}• {opt stats(col)} creates {cmd:colprop*} and/or {cmd:colpct*} variables{p_end}
