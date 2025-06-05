@@ -1,6 +1,9 @@
 # Test folder
 test/
 
+# Claude Code instructions (keep private)
+CLAUDE.md
+
 # Other common files to ignore (optional)
 *.log
 *.tmp
@@ -9,3 +12,9 @@ test/
 Thumbs.db
 *.xlsx
 package_maintenance_guide.*
+
+# Memory bank documentation (private)
+memory-bank/
+
+# CLI configuration rules (private)
+.clinerules
