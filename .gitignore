@@ -1,9 +1,3 @@
-# Test folder
-test/
-
-# Claude Code instructions (keep private)
-CLAUDE.md
-
 # Other common files to ignore (optional)
 *.log
 *.tmp
@@ -13,11 +7,21 @@ Thumbs.db
 *.xlsx
 package_maintenance_guide.*
 
+# Private configuration files
 # Memory bank documentation (private)
 memory-bank/
 
 # CLI configuration rules (private)
 .clinerules
 
-# Auto-detecting test script (keep local)
-run_tests.sh
+# Claude Code instructions (keep private)
+CLAUDE.md
+
+# Test folder
+test/
+
+# Claude folder
+.claude/
+
+# copilot instructions (keep private)
+.github/copilot-instructions.md
