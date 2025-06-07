@@ -25,3 +25,6 @@ test/
 
 # copilot instructions (keep private)
 .github/copilot-instructions.md
+
+# copilot instructions folder (keep private)
+.github/instructions/
