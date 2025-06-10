@@ -1,4 +1,4 @@
-*! Version 1.0.1 Hafiz 03Jun2025
+*! Version 1.0.1 03Jun2025
 capture program drop dtstat
 program define dtstat
     * Module to produce descriptive statistics dataset
