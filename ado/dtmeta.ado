@@ -1,6 +1,6 @@
+*! Version 1.0.0 Hafiz 02Jun2025
 capture program drop dtmeta
 program define dtmeta, rclass
-    *! Version 1.0.0 Hafiz 02Jun2025
     * Module to produce three metadata datasets in separate frames
     
     version 16
