@@ -5,14 +5,10 @@ title: "[FEATURE] "
 labels: enhancement
 ---
 
-**Describe the feature**
-A clear and concise description of the feature you want.
+### Is your feature request related to a problem?
 
-**Why is this needed?**
-Explain why this feature would be useful.
+### Describe the solution you'd like
 
-**Describe alternatives you've considered**
-If applicable, describe any alternative solutions or features you've considered.
+### Describe alternatives you've considered
 
-**Additional context**
-Add any other context or screenshots about the feature request here.
+### Additional Context

@@ -1,30 +1,20 @@
 ---
 name: Bug Report
-about: Report a problem or unexpected behavior
+about: Report a bug or unexpected behavior
 title: "[BUG] "
 labels: bug
 ---
 
-**Describe the bug**
-A clear and concise description of what the bug is.
+### Description
 
-**To Reproduce**
-Steps to reproduce the behavior:
-1.
-2.
-3.
+### Steps to Reproduce
 
-**Expected behavior**
-A clear and concise description of what you expected to happen.
+### Expected Behavior
 
-**Screenshots or Logs**
-If applicable, add screenshots or log output to help explain your problem.
+### Environment
 
-**Environment (please complete the following information):**
+- **OS:**
+- **Stata version:**
+- **Package version:**
 
-- OS:
-- Stata version:
-- Package version:
-
-**Additional context**
-Add any other context about the problem here.
+### Additional Context / Media
