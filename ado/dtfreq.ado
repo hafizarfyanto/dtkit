@@ -1,5 +1,4 @@
-*! Version 1.0.1 03Jun2025
-capture program drop dtfreq
+*! Version 1.0.2 25Jun2025
 program define dtfreq
     * Module to produce frequency dataset
 
@@ -17,11 +16,12 @@ program define dtfreq
 
     _argcheck `varlist' `if' `in' [`weight'`exp'], df(`df') by(`by') cross(`cross') `binary' format(`format') `miss' using(`using') excel(`excel') stats("`stats'") type("`type'") save(`save') replace(`replace') clear(`clear')
 
+    local fullname "`r(fullname)'"
+
     // * Set defaults
     if "`df'" == "" local df "_df"
     if "`stats'" == "" local stats "col"
     if "`type'" == "" local type "prop"
-
 
     capture frame drop `df'
     frame create `df'
@@ -77,23 +77,14 @@ program define dtfreq
     // sort results (freq always exists)
     frame `df': sort `by' varname freq*
 
-
     // export to excel
     if `"`save'"' != "" {
-        local inputfile = subinstr(`"`save'"', `"""', "", .)
-        if ustrregexm("`inputfile'", "^(.*[/\\])?([^/\\]+?)(\.[^./\\]+)?$") {
-            local fullpath = ustrregexs(1)
-            local filename = ustrregexs(2)
-            local extension = ustrregexs(3)
-            local fullname = "`fullpath'`filename'`extension'"
-        }
-        frame `df': _toexcel, fullname(`fullname') excel(`excel') replace(`replace')
+        frame `df': _toexcel, fullname("`fullname'") excel(`excel') replace(`replace')
     }
 
 end
 
 // * Loops through variables and groups to make tables
-capture program drop _xtab
 program define _xtab
     syntax varlist(min=1 numeric) [, df(name) by(name) cross(name) binary(name) source_frame(name) temp_frame(name) ifcmd(string) wtexp(string)]
 
@@ -152,7 +143,6 @@ program define _xtab
 end
 
 // * Does the actual counting and math for each table
-capture program drop _xtab_core
 program define _xtab_core
     // use name instead of varname
     syntax, var(name) varlab(string) level(real) source_frame(name) ///
@@ -231,7 +221,6 @@ program define _xtab_core
 end
 
 // * reshape binary data (formerly yesno)
-capture program drop _binreshape
 program define _binreshape
     syntax, [by(name) cross(name)]
     
@@ -264,7 +253,6 @@ program define _binreshape
 end
 
 // * adds total row for cross option
-capture program drop _crosstotal
 program define _crosstotal
     syntax, [vallabname(name)] // Optional vallab variable name
 
@@ -330,7 +318,6 @@ program define _crosstotal
     }
 end
 // * Adds nice names to all output columns
-capture program drop _labelvars
 program define _labelvars
     syntax, [df(name) by(name) cross(name) source_frame(name) binary(name) ifcmd(string)]
     // standard vars/vars in one-way
@@ -420,13 +407,12 @@ program define _labelvars
 end
 
 // * Saves the final table to Excel file
-capture program drop _toexcel
 program define _toexcel
 
-    syntax, [fullname(string) excel(string) replace(string)]
+    syntax, [fullname(string asis) excel(string) replace(string)]
 
     if "`replace'" == "" local replace "modify"
-    if "`fullname'" != "" {
+    if `"`fullname'"' != "" {
         // Set export options
         if `"`excel'"' == "" {
             local exportcmd `"`fullname', sheet("dtfreq_output", `replace') firstrow(varlabels)"'
@@ -442,7 +428,6 @@ program define _toexcel
 end
 
 // * Makes numbers look good with commas and decimals
-capture program drop _formatvars
 program define _formatvars
     syntax varlist, [report]
     foreach var of local varlist {
@@ -535,7 +520,6 @@ program define _formatvars
 end
 
 // * Checks if user inputs are valid before starting
-capture program drop _argcheck
 program define _argcheck, rclass
     syntax varlist(min=1 numeric) [if] [in] [aweight fweight iweight pweight] ///
            [, df(string) by(varname numeric) cross(varname numeric) BINary ///
@@ -673,10 +657,36 @@ program define _argcheck, rclass
         }
     }
 
+    // * Excel export
+    if `"`save'"' != "" {
+        local inputfile = subinstr(`"`save'"', `"""', "", .)
+        if ustrregexm("`inputfile'", "^(.*[/\\])?([^/\\]+?)(\.[^./\\]+)?$") {
+            local fullpath = c(pwd) + "/" + ustrregexs(1)
+            local filename = ustrregexs(2)
+            local extension = ustrregexs(3)
+            if "`extension'" == "" local extension = ".xlsx"
+            local fullname = "`fullpath'`filename'`extension'"
+        }
+    }   
+    local workdir = c(pwd)
+    capture cd "`fullpath'"
+    if _rc == 170 {
+        display as error "Cannot access the directory specified in save() option: " as result "`fullpath'"
+        exit 601
+    }
+    else {
+        quietly cd "`workdir'"
+        return local fullpath "`fullpath'"
+        return local filename "`filename'"
+        return local extension "`extension'"
+        return local fullname "`fullname'"
+        return local save `"`save'"'
+        return local excel "`excel'"
+        return local replace "`replace'"
+    }
 end
 
 // * Determines the data source
-capture program drop _argload
 program define _argload, rclass
     syntax, [using(string) clear(string)]
 
@@ -706,7 +716,6 @@ program define _argload, rclass
 end
 
 // * Calculates percentages and proportions in Mata
-capture mata: mata drop _xtab_core_calc()
 mata:
 void _xtab_core_calc()
 {

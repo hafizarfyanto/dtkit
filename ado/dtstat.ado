@@ -1,10 +1,9 @@
-*! Version 1.0.1 03Jun2025
-capture program drop dtstat
+*! Version 1.0.2 25Jun2025
 program define dtstat
     * Module to produce descriptive statistics dataset
 
     version 16
-    syntax anything(id="varlist") [if] [in] [aweight fweight iweight pweight] [using/] [, df(string) by(varlist) stats(string asis) FOrmat(string) noMISS FAst save(string asis) excel(string) REPlace]
+    syntax anything(id="varlist") [if] [in] [aweight fweight iweight pweight] [using/] [, df(string) by(varlist) stats(string asis) FOrmat(string) noMISS FAst save(string asis) excel(string) REPlace Clear]
 
     // Validate arguments and get returned parameters
     _argload, clear(`clear') using(`using')
@@ -16,8 +15,9 @@ program define dtstat
     local varlist `anything'
 
     // Initialize and validate inputs
-    _argcheck, fast(`fast') save(`save') excel(`excel') varlist(`varlist')
+    _argcheck, fast(`fast') save(`save') excel(`excel') replace(`replace') varlist(`varlist')
     local collapsecmd "`r(collapsecmd)'"
+    local fullname "`r(fullname)'"
 
     // * Set defaults
     if "`df'" == "" local df "_df"
@@ -48,19 +48,11 @@ program define dtstat
 
     // export to excel
     if `"`save'"' != "" {
-        local inputfile = subinstr(`"`save'"', `"""', "", .)
-        if ustrregexm("`inputfile'", "^(.*[/\\])?([^/\\]+?)(\.[^./\\]+)?$") {
-            local fullpath = ustrregexs(1)
-            local filename = ustrregexs(2)
-            local extension = ustrregexs(3)
-            local fullname = "`fullpath'`filename'`extension'"
-        }
-        frame `df': _toexcel, fullname(`fullname') excel(`excel') replace(`replace')
+        frame `df': _toexcel, fullname("`fullname'") excel(`excel') replace(`replace')
     }
 end
 
 // * statistics processing
-capture program drop _stats
 program define _stats, rclass
     syntax, [stats(string asis)]
     
@@ -77,7 +69,6 @@ program define _stats, rclass
 end
 
 // * main collapse loop
-capture program drop _collapsevars
 program define _collapsevars
     syntax varlist, [by(string) ifcmd(string) wtexp(string) collapsecmd(string) ///
         collapse_stats(string asis) df(string) stats_list(string) total_id(string) ///
@@ -121,7 +112,6 @@ program define _collapsevars
 end
 
 // * by-group processing
-capture program drop _byprocess
 program define _byprocess
     syntax, [by(string) collapsecmd(string) collapse_stats(string asis) ///
         ifcmd(string) wtexp(string) varcount(string) total_id(string)]
@@ -167,7 +157,6 @@ program define _byprocess
 end
 
 // * apply formatting and labeling
-capture program drop _format
 program define _format
     syntax, [by(string) format(string)] df(string)
     
@@ -195,7 +184,6 @@ program define _format
 end
 
 // * make variable labels
-capture program drop _labelvars
 program define _labelvars
     capture label variable mean "means"
     capture label variable median "medians"
@@ -229,7 +217,6 @@ program define _labelvars
 end
 
 // * Makes numbers look good with commas and decimals
-capture program drop _formatvars
 program define _formatvars
     syntax varlist, [report]
     foreach var of local varlist {
@@ -322,13 +309,12 @@ program define _formatvars
 end
 
 // * Saves the final table to Excel file
-capture program drop _toexcel
 program define _toexcel
 
-    syntax, [fullname(string) excel(string) replace(string)]
+    syntax, [fullname(string asis) excel(string) replace(string)]
 
-    if "`replace'" == "" local replace = "modify"
-    if "`fullname'" != "" {
+    if "`replace'" == "" local replace "modify"
+    if `"`fullname'"' != "" {
         // Set export options
         if `"`excel'"' == "" {
             local exportcmd `"`fullname', sheet("dtstat_output", `replace') firstrow(varlabels)"'
@@ -346,7 +332,7 @@ end
 // * Checks if user inputs are valid before starting
 capture program drop _argcheck
 program define _argcheck, rclass
-    syntax, [fast(string) excel(string) save(string asis)] varlist(namelist)
+    syntax, [fast(string) excel(string) save(string asis) replace(string)] varlist(namelist)
 
     // * Cross-option validation
     // Ensure excel is only present if using is present
@@ -359,6 +345,34 @@ program define _argcheck, rclass
     if "`replace'" != "" & `"`save'"' == "" {
         display as error "option replace only allowed with save"
         exit 198
+    }
+
+    // * Excel export
+    if `"`save'"' != "" {
+        local inputfile = subinstr(`"`save'"', `"""', "", .)
+        if ustrregexm("`inputfile'", "^(.*[/\\])?([^/\\]+?)(\.[^./\\]+)?$") {
+            local fullpath = c(pwd) + "/" + ustrregexs(1)
+            local filename = ustrregexs(2)
+            local extension = ustrregexs(3)
+            if "`extension'" == "" local extension = ".xlsx"
+            local fullname = "`fullpath'`filename'`extension'"
+        }
+    }   
+    local workdir = c(pwd)
+    capture cd "`fullpath'"
+    if _rc == 170 {
+        display as error "Cannot access the directory specified in save() option: " as result "`fullpath'"
+        exit 601
+    }
+    else {
+        quietly cd "`workdir'"
+        return local fullpath "`fullpath'"
+        return local filename "`filename'"
+        return local extension "`extension'"
+        return local fullname "`fullname'"
+        return local save `"`save'"'
+        return local excel "`excel'"
+        return local replace "`replace'"
     }
 
     // Check dependencies and set collapse command
@@ -389,7 +403,6 @@ program define _argcheck, rclass
 end
 
 // * Determines the data source
-capture program drop _argload
 program define _argload, rclass
     syntax, [using(string) clear(string)]
 

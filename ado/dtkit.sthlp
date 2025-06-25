@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 1.0.0 02Jun2025}{...}
+{* *! version 1.0.2 25Jun2025}{...}
 {viewerjumpto "Syntax" "dtkit##syntax"}{...}
 {viewerjumpto "Description" "dtkit##description"}{...}
 {viewerjumpto "Commands" "dtkit##commands"}{...}
