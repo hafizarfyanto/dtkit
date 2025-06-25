@@ -5,16 +5,15 @@ title: "[BUG] "
 labels: bug
 ---
 
-### Description
+<!-- What went wrong? -->
 
-### Steps to Reproduce
+<!-- How can we recreate this problem? -->
 
-### Expected Behavior
+<!-- What should have happened instead? -->
 
-### Environment
-
+<!-- What's your setup? -->
 - **OS:**
 - **Stata version:**
 - **Package version:**
 
-### Additional Context / Media
+<!-- Got any screenshots or extra details that might help? -->

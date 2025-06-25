@@ -5,10 +5,10 @@ title: "[FEATURE] "
 labels: enhancement
 ---
 
-### Is your feature request related to a problem?
+<!-- Is this solving a problem you're having? -->
 
-### Describe the solution you'd like
+<!-- What would you like to see happen? -->
 
-### Describe alternatives you've considered
+<!-- Have you thought of any other ways to solve this? -->
 
-### Additional Context
+<!-- Anything else we should know? -->
