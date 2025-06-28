@@ -276,7 +276,7 @@ The active frame remains unchanged unless an error occurs during frame switching
 {pstd}GitHub: {browse "https://github.com/hafizarfyanto/dtkit":https://github.com/hafizarfyanto/dtkit}{p_end}
 
 {pstd}
-Program Version: {bf:1.0.1} (03 June 2025)
+For questions and suggestions, visit {browse "https://github.com/hafizarfyanto/dtkit/issues":GitHub Issues}.
 
 {title:Also see}
 

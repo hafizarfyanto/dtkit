@@ -1,7 +1,5 @@
 {smcl}
-{* *! version 1.0.1 25Jun2025}{...}
-{vieweralsosee "[R] describe" "help describe"}{...}
-{vieweralsosee "[R] notes" "help notes"}{...}
+Program Version: {bf:1.0.1} (25 Jun 2025){vieweralsosee "[R] notes" "help notes"}{...}
 {vieweralsosee "[R] label" "help label"}{...}
 {vieweralsosee "[D] frames" "help frames"}{...}
 {viewerjumpto "Syntax" "dtmeta##syntax"}{...}
@@ -303,10 +301,7 @@ the data in memory is replaced by the data from the specified file before metada
 {pstd}GitHub: {browse "https://github.com/hafizarfyanto/dtkit":https://github.com/hafizarfyanto/dtkit}{p_end}
 
 {pstd}
-Program Version: {bf:1.0.0} (02 June 2025)
-
-{pstd}
-For questions and suggestions, please contact the author.
+For questions and suggestions, visit {browse "https://github.com/hafizarfyanto/dtkit/issues":GitHub Issues}.
 
 {marker also_see}{...}
 {title:Also see}

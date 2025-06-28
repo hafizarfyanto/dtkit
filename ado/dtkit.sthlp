@@ -184,7 +184,7 @@ Also consider {stata ssc install gcollapse} if using older versions of gtools.{p
 {pstd}GitHub: {browse "https://github.com/hafizarfyanto/dtkit":https://github.com/hafizarfyanto/dtkit}{p_end}
 
 {pstd}
-Program Version: {bf:1.0.0} (02 Jun 2025)
+For questions and suggestions, visit {browse "https://github.com/hafizarfyanto/dtkit/issues":GitHub Issues}.
 
 {pstd}
 The {opt dtkit} package was developed to provide Stata users with tools that enhance
