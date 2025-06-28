@@ -11,9 +11,10 @@ labels: bug
 
 <!-- What should have happened instead? -->
 
-<!-- What's your setup? -->
+<!-- What's your setup?
 - **OS:**
 - **Stata version:**
 - **Package version:**
+-->
 
 <!-- Got any screenshots or extra details that might help? -->
