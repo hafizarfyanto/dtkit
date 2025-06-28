@@ -5,14 +5,10 @@ title: "[FEATURE] "
 labels: enhancement
 ---
 
-**Describe the feature**
-A clear and concise description of the feature you want.
+<!-- Is this solving a problem you're having? -->
 
-**Why is this needed?**
-Explain why this feature would be useful.
+<!-- What would you like to see happen? -->
 
-**Describe alternatives you've considered**
-If applicable, describe any alternative solutions or features you've considered.
+<!-- Have you thought of any other ways to solve this? -->
 
-**Additional context**
-Add any other context or screenshots about the feature request here.
+<!-- Anything else we should know? -->

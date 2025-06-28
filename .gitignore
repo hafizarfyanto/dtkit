@@ -23,8 +23,11 @@ test/
 # Claude folder
 .claude/
 
-# copilot instructions (keep private)
-.github/copilot-instructions.md
+# Cursor configuration (keep private)
+.cursor/
+
+# Roo Code configuration (keep private)
+.roorules
 
 # project setup files (keep private)
 project_setup_templates/

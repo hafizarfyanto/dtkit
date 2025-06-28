@@ -1,5 +1,4 @@
-*! Version 1.0.0 02Jun2025
-capture program drop dtmeta
+*! Version 1.0.1 25Jun2025
 program define dtmeta, rclass
     * Module to produce three metadata datasets in separate frames
     
@@ -12,6 +11,7 @@ program define dtmeta, rclass
     // Define frames
     local source_frame `r(source_frame)'
     local _defaultframe `r(_defaultframe)'
+    local fullname "`r(fullname)'"
     foreach frname in _dtvars _dtlabel _dtnotes _dtinfo {
         local `frname' "`frname'"
         capture frame drop `frname'
@@ -38,7 +38,7 @@ program define dtmeta, rclass
     return add
 
     // export to save
-    if `"`save'"' != "" _toexcel, save(`save')
+    if `"`save'"' != "" _toexcel, fullname("`fullname'") replace(`replace')
     if "`_defaultframe'" != "" cwf `_defaultframe'
     return local source_frame `source_frame'
 
@@ -47,7 +47,6 @@ program define dtmeta, rclass
 end
 
 // * create variable metadata
-capture program drop _makevars
 program define _makevars, rclass
     syntax , source_frame(name) target_frame(name)
     frame copy `source_frame' `target_frame', replace
@@ -57,7 +56,6 @@ program define _makevars, rclass
 end
 
 // * create variable notes
-capture program drop _makevarnotes
 program define _makevarnotes
     syntax , source_frame(name) target_frame(name)
 
@@ -91,7 +89,6 @@ program define _makevarnotes
 end
 
 // * create value labels
-capture program drop _makevallab
 program define _makevallab, rclass
     syntax , source_frame(name) target_frame(name)
     frame copy `source_frame' `target_frame', replace
@@ -111,7 +108,6 @@ program define _makevallab, rclass
 end
 
 // * Dataset-level info
-capture program drop _makedtainfo
 program define _makedtainfo
     syntax , source_frame(name) target_frame(name)
 
@@ -158,7 +154,6 @@ program define _makedtainfo
 end
 
 * New subroutine: Check if frame is empty and handle accordingly
-capture program drop _isempty
 program define _isempty
     syntax , frame(name) message(string) source_frame(name)
     frame `frame' {
@@ -172,7 +167,6 @@ program define _isempty
     }
 end
 
-capture program drop _labelframes
 program define _labelframes
     syntax, frame(name) source_frame(name)
     // extract filename
@@ -227,24 +221,12 @@ program define _labelframes
 end
 
 // * Saves the final table to Excel file
-capture program drop _toexcel
 program define _toexcel
 
-    syntax, [save(string asis) replace(string)]
-
-    // export to save
-    if `"`save'"' != "" {
-        local inputfile = subinstr(`"`save'"', `"""', "", .)
-        if ustrregexm("`inputfile'", "^(.*[/\\])?([^/\\]+?)(\.[^./\\]+)?$") {
-            local fullpath = ustrregexs(1)
-            local filename = ustrregexs(2)
-            local extension = ustrregexs(3)
-            local fullname = "`fullpath'`filename'`extension'"
-        }
-    }
+    syntax, [fullname(string asis) replace(string)]
 
     if "`replace'" == "" local replace "modify"
-    if "`fullname'" != "" {
+    if `"`fullname'"' != "" {
         // Set export options
         quietly frames dir _dt*
         foreach fr in `r(frames)' {
@@ -257,7 +239,6 @@ program define _toexcel
 end
 
 // * Checks if user inputs are valid before starting
-capture program drop _argload
 program define _argload, rclass
     syntax, [using(string) clear(string) replace(string) save(string)]
 
@@ -271,6 +252,61 @@ program define _argload, rclass
     if "`replace'" != "" & "`save'" == "" {
         display as error "option replace only allowed with save"
         exit 198
+    }
+
+    // * Excel export
+    if `"`save'"' != "" {
+        local inputfile = subinstr(`"`save'"', `"""', "", .)
+        
+        // Validate against path traversal attacks
+        if ustrregexm("`inputfile'", "\.\./") {
+            display as error "Path traversal attempts are not allowed in save() option"
+            exit 198
+        }
+        
+        if ustrregexm("`inputfile'", "^(.*[/\\])?([^/\\]+?)(\.[^./\\]+)?$") {
+            local dir_part = ustrregexs(1)
+            local filename = ustrregexs(2)
+            local extension = ustrregexs(3)
+            if "`extension'" == "" local extension = ".xlsx"
+            
+            // Handle directory part properly
+            if "`dir_part'" == "" {
+                local fullpath = c(pwd)
+            }
+            else {
+                // Use pathutil for cross-platform path handling
+                local fullpath = "`dir_part'"
+                if !ustrregexm("`fullpath'", "^[A-Za-z]:") & !ustrregexm("`fullpath'", "^[/\\]") {
+                    // Relative path - make it absolute
+                    local fullpath = c(pwd) + c(dirsep) + "`dir_part'"
+                }
+            }
+            
+            local fullname = "`fullpath'" + c(dirsep) + "`filename'`extension'"
+            
+            // Test directory accessibility
+            local workdir = c(pwd)
+            capture cd "`fullpath'"
+            if _rc == 170 {
+                display as error "Cannot access the directory specified in save() option: " as result "`fullpath'"
+                exit 601
+            }
+            else {
+                quietly cd "`workdir'"
+                return local fullpath "`fullpath'"
+                return local filename "`filename'"
+                return local extension "`extension'"
+                return local fullname "`fullname'"
+                return local save `"`save'"'
+                return local excel "`excel'"
+                return local replace "`replace'"
+            }
+        }
+        else {
+            display as error "Invalid file path format in save() option"
+            exit 198
+        }
     }
 
     local _inmemory = c(filename) != "" | c(N) > 0 | c(k) > 0 | c(changed) == 1
@@ -299,7 +335,6 @@ program define _argload, rclass
 end
 
 // * report metadata creation
-capture program drop _makereport
 program define _makereport
 
     syntax, source_frame(name) [clear(string) saving(string) report(string)]

@@ -1,30 +1,20 @@
 ---
 name: Bug Report
-about: Report a problem or unexpected behavior
+about: Report a bug or unexpected behavior
 title: "[BUG] "
 labels: bug
 ---
 
-**Describe the bug**
-A clear and concise description of what the bug is.
+<!-- What went wrong? -->
 
-**To Reproduce**
-Steps to reproduce the behavior:
-1.
-2.
-3.
+<!-- How can we recreate this problem? -->
 
-**Expected behavior**
-A clear and concise description of what you expected to happen.
+<!-- What should have happened instead? -->
 
-**Screenshots or Logs**
-If applicable, add screenshots or log output to help explain your problem.
+<!-- What's your setup?
+- **OS:**
+- **Stata version:**
+- **Package version:**
+-->
 
-**Environment (please complete the following information):**
-
-- OS:
-- Stata version:
-- Package version:
-
-**Additional context**
-Add any other context about the problem here.
+<!-- Got any screenshots or extra details that might help? -->

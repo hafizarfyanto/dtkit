@@ -5,9 +5,8 @@ All notable changes to the dtkit project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [dtkit-v1.0.1] - 2025-06-03
+## Package Release [dtkit-v1.0.1] - 2025-06-03
 
-### Package Release
 - This update includes an important bug fix for the `dtfreq` and `dtstat` commands.
 - Component versions included in this release:
   - **dtfreq: v1.0.1 (Updated)**
@@ -15,19 +14,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - dtmeta: v1.0.0 (Unchanged)
 
 ### Fixed
+
 - **dtfreq v1.0.1**:
   - Fixed an issue where the "Total" row in tables created with the `cross()` option sometimes showed incorrect calculations for proportions and percentages. Totals are now accurate.
 - **dtstat v1.0.1**:
   - Fixed unused internal subroutine for sample marking.
   
-## [dtkit-v1.0.0] - 2025-06-02
+## Package Release [dtkit-v1.0.0] - 2025-06-02
 
-### Package Release
 - **First official release** of the `dtkit` tools for Stata.
 - All tools (`dtfreq`, `dtstat`, `dtmeta`) have been fully updated for better performance and easier use.
 - Thoroughly tested for reliability.
 
 ### Added
+
 New tools included in this release:
 
 - **dtstat v1.0.0**: For descriptive statistics.
@@ -53,7 +53,9 @@ New tools included in this release:
   - Works well even if your dataset doesn't have many notes or labels.
 
 ### Improved
+
 General improvements for all tools:
+
 - **File Saving**: More reliable when saving files.
 - **Excel Export**: Consistent Excel export options across all tools.
 - **Help Files**: Updated help files with more examples.
@@ -76,6 +78,7 @@ General improvements for all tools:
 ## Previous Versions
 
 ### Pre-v1.0.0
+
 - Development versions with inconsistent functionality
 - Mixed version numbers across modules
 - Limited documentation and test coverage
